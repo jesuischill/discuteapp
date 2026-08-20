@@ -1,0 +1,404 @@
+let token = localStorage.getItem("discuteapp_token");
+let me = JSON.parse(localStorage.getItem("discuteapp_user") || "null");
+let socket = null;
+let currentPrivateUser = null;
+
+function headers() {
+  return {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${token}`
+  };
+}
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...headers(),
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Erreur");
+  }
+
+  return data;
+}
+
+async function register() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  try {
+    const data = await fetch("/api/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    }).then(r => r.json());
+
+    if (data.error) throw new Error(data.error);
+
+    saveSession(data);
+  } catch (error) {
+    document.getElementById("authError").textContent = error.message;
+  }
+}
+
+async function login() {
+  const username = document.getElementById("username").value;
+  const password = document.getElementById("password").value;
+
+  try {
+    const data = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password })
+    }).then(r => r.json());
+
+    if (data.error) throw new Error(data.error);
+
+    saveSession(data);
+  } catch (error) {
+    document.getElementById("authError").textContent = error.message;
+  }
+}
+
+function saveSession(data) {
+  token = data.token;
+  me = data.user;
+
+  localStorage.setItem("discuteapp_token", token);
+  localStorage.setItem("discuteapp_user", JSON.stringify(me));
+
+  startApp();
+}
+
+function logout() {
+  localStorage.removeItem("discuteapp_token");
+  localStorage.removeItem("discuteapp_user");
+  location.reload();
+}
+
+function startApp() {
+  document.getElementById("authScreen").classList.add("hidden");
+  document.getElementById("appScreen").classList.remove("hidden");
+
+  document.getElementById("currentUser").textContent =
+    `${me.username} (${me.role})`;
+
+  if (me.role === "owner" || me.role === "admin") {
+    document.getElementById("adminButton").classList.remove("hidden");
+  }
+
+  socket = io({
+    auth: { token }
+  });
+
+  socket.on("public_message", message => {
+    if (document.getElementById("publicChat")) {
+      addMessage("publicChat", message.username, message.content);
+    }
+  });
+
+  socket.on("private_message", message => {
+    const otherId =
+      message.fromUserId === me.id
+        ? message.toUserId
+        : message.fromUserId;
+
+    if (
+      currentPrivateUser &&
+      currentPrivateUser.id === otherId
+    ) {
+      addMessage(
+        "privateChat",
+        message.fromUserId === me.id ? me.username : currentPrivateUser.username,
+        message.content
+      );
+    }
+  });
+
+  loadConversations();
+  showPublic();
+}
+
+async function showPublic() {
+  currentPrivateUser = null;
+
+  document.getElementById("content").innerHTML = `
+    <h1>🌍 Chat public</h1>
+    <div id="publicChat" class="chat"></div>
+
+    <div class="row">
+      <input id="publicInput" placeholder="Écrire un message...">
+      <button onclick="sendPublic()">Envoyer</button>
+    </div>
+  `;
+
+  try {
+    const messages = await api("/api/public-messages");
+
+    for (const message of messages) {
+      addMessage("publicChat", message.username, message.content);
+    }
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+function addMessage(containerId, username, content) {
+  const container = document.getElementById(containerId);
+
+  if (!container) return;
+
+  const element = document.createElement("div");
+  element.className = "message";
+
+  const name = document.createElement("strong");
+  name.textContent = username;
+
+  const text = document.createElement("div");
+  text.textContent = content;
+
+  element.append(name, text);
+  container.appendChild(element);
+  container.scrollTop = container.scrollHeight;
+}
+
+function sendPublic() {
+  const input = document.getElementById("publicInput");
+  const content = input.value.trim();
+
+  if (!content) return;
+
+  socket.emit("public_message", content);
+  input.value = "";
+}
+
+async function showUsers() {
+  const users = await api("/api/users");
+
+  document.getElementById("content").innerHTML = `
+    <h1>👥 Utilisateurs</h1>
+    <div id="usersList"></div>
+  `;
+
+  const list = document.getElementById("usersList");
+
+  users.forEach(user => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const name = document.createElement("strong");
+    name.textContent = user.username;
+
+    const button = document.createElement("button");
+    button.textContent = "Envoyer une demande privée";
+    button.onclick = () => sendRequest(user.id);
+
+    card.append(name, button);
+    list.appendChild(card);
+  });
+}
+
+async function sendRequest(userId) {
+  try {
+    await api(`/api/private-request/${userId}`, {
+      method: "POST"
+    });
+
+    alert("Demande envoyée !");
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function showRequests() {
+  const requests = await api("/api/private-requests");
+
+  document.getElementById("content").innerHTML = `
+    <h1>🔔 Demandes</h1>
+    <div id="requestsList"></div>
+  `;
+
+  const list = document.getElementById("requestsList");
+
+  if (!requests.length) {
+    list.textContent = "Aucune demande.";
+    return;
+  }
+
+  requests.forEach(request => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const text = document.createElement("p");
+    text.textContent =
+      `${request.from_username} veut discuter avec toi en privé.`;
+
+    const accept = document.createElement("button");
+    accept.textContent = "Accepter";
+    accept.onclick = () => respondRequest(request.id, "accept");
+
+    const refuse = document.createElement("button");
+    refuse.textContent = "Refuser";
+    refuse.className = "danger";
+    refuse.onclick = () => respondRequest(request.id, "refuse");
+
+    card.append(text, accept, refuse);
+    list.appendChild(card);
+  });
+}
+
+async function respondRequest(id, action) {
+  try {
+    await api(`/api/private-request/${id}/respond`, {
+      method: "POST",
+      body: JSON.stringify({ action })
+    });
+
+    await showRequests();
+    await loadConversations();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function loadConversations() {
+  const conversations = await api("/api/private-conversations");
+  const container = document.getElementById("conversations");
+
+  container.innerHTML = "";
+
+  conversations.forEach(user => {
+    const button = document.createElement("button");
+    button.textContent = `💬 ${user.username}`;
+    button.onclick = () => openPrivate(user);
+
+    container.appendChild(button);
+  });
+}
+
+function openPrivate(user) {
+  currentPrivateUser = user;
+
+  document.getElementById("content").innerHTML = `
+    <h1>💬 ${escapeHtml(user.username)}</h1>
+    <div id="privateChat" class="chat"></div>
+
+    <div class="row">
+      <input id="privateInput" placeholder="Message privé...">
+      <button onclick="sendPrivate()">Envoyer</button>
+    </div>
+  `;
+}
+
+function sendPrivate() {
+  const input = document.getElementById("privateInput");
+  const content = input.value.trim();
+
+  if (!content || !currentPrivateUser) return;
+
+  socket.emit("private_message", {
+    toUserId: currentPrivateUser.id,
+    content
+  });
+
+  input.value = "";
+}
+
+async function showAdmin() {
+  const users = await api("/api/admin/users");
+
+  document.getElementById("content").innerHTML = `
+    <h1>🛡️ Panneau Admin</h1>
+    <div id="adminUsers"></div>
+  `;
+
+  const container = document.getElementById("adminUsers");
+
+  users.forEach(user => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    const title = document.createElement("strong");
+    title.textContent =
+      `${user.username} — ${user.role} ${user.banned ? "(BANNI)" : ""}`;
+
+    card.appendChild(title);
+
+    if (me.role === "owner" && user.role !== "owner") {
+      const roleButton = document.createElement("button");
+
+      roleButton.textContent =
+        user.role === "admin"
+          ? "Retirer Admin"
+          : "Donner Admin";
+
+      roleButton.onclick = () =>
+        changeRole(
+          user.id,
+          user.role === "admin" ? "user" : "admin"
+        );
+
+      card.appendChild(roleButton);
+    }
+
+    if (user.role !== "owner") {
+      const banButton = document.createElement("button");
+
+      banButton.textContent =
+        user.banned ? "Débannir" : "Bannir";
+
+      banButton.className =
+        user.banned ? "success" : "danger";
+
+      banButton.onclick = () =>
+        user.banned
+          ? unbanUser(user.id)
+          : banUser(user.id);
+
+      card.appendChild(banButton);
+    }
+
+    container.appendChild(card);
+  });
+}
+
+async function changeRole(id, role) {
+  await api(`/api/admin/users/${id}/role`, {
+    method: "POST",
+    body: JSON.stringify({ role })
+  });
+
+  showAdmin();
+}
+
+async function banUser(id) {
+  await api(`/api/admin/users/${id}/ban`, {
+    method: "POST"
+  });
+
+  showAdmin();
+}
+
+async function unbanUser(id) {
+  await api(`/api/admin/users/${id}/unban`, {
+    method: "POST"
+  });
+
+  showAdmin();
+}
+
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+if (token && me) {
+  startApp();
+}

@@ -1,0 +1,446 @@
+const express = require("express");
+const http = require("http");
+const path = require("path");
+const { Server } = require("socket.io");
+const Database = require("better-sqlite3");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+
+const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
+const PORT = 3000;
+const JWT_SECRET = process.env.JWT_SECRET || "CHANGE_MOI_PAR_UN_SECRET_LONG";
+
+const db = new Database("discuteapp.db");
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS users (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT UNIQUE NOT NULL,
+  password TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'user',
+  banned INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS public_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  username TEXT NOT NULL,
+  content TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS private_requests (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_user_id INTEGER NOT NULL,
+  to_user_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS private_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  from_user_id INTEGER NOT NULL,
+  to_user_id INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+`);
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, "public")));
+
+function createToken(user) {
+  return jwt.sign(
+    {
+      id: user.id,
+      username: user.username,
+      role: user.role
+    },
+    JWT_SECRET,
+    { expiresIn: "7d" }
+  );
+}
+
+function getUserFromToken(token) {
+  try {
+    return jwt.verify(token, JWT_SECRET);
+  } catch {
+    return null;
+  }
+}
+
+function auth(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header?.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "Non connecté" });
+  }
+
+  const user = getUserFromToken(header.slice(7));
+
+  if (!user) {
+    return res.status(401).json({ error: "Session invalide" });
+  }
+
+  const dbUser = db
+    .prepare("SELECT * FROM users WHERE id = ?")
+    .get(user.id);
+
+  if (!dbUser || dbUser.banned) {
+    return res.status(403).json({ error: "Compte indisponible" });
+  }
+
+  req.user = dbUser;
+  next();
+}
+
+function adminOnly(req, res, next) {
+  if (req.user.role !== "owner" && req.user.role !== "admin") {
+    return res.status(403).json({ error: "Accès refusé" });
+  }
+
+  next();
+}
+
+/* INSCRIPTION */
+app.post("/api/register", async (req, res) => {
+  const username = String(req.body.username || "").trim();
+  const password = String(req.body.password || "");
+
+  if (username.length < 3 || password.length < 6) {
+    return res.status(400).json({
+      error: "Pseudo minimum 3 caractères, mot de passe minimum 6."
+    });
+  }
+
+  try {
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    const result = db.prepare(`
+      INSERT INTO users (username, password)
+      VALUES (?, ?)
+    `).run(username, passwordHash);
+
+    const user = db
+      .prepare("SELECT * FROM users WHERE id = ?")
+      .get(result.lastInsertRowid);
+
+    res.json({
+      token: createToken(user),
+      user: {
+        id: user.id,
+        username: user.username,
+        role: user.role
+      }
+    });
+  } catch {
+    res.status(400).json({ error: "Ce pseudo existe déjà." });
+  }
+});
+
+/* CONNEXION */
+app.post("/api/login", async (req, res) => {
+  const username = String(req.body.username || "").trim();
+  const password = String(req.body.password || "");
+
+  const user = db
+    .prepare("SELECT * FROM users WHERE username = ?")
+    .get(username);
+
+  if (!user) {
+    return res.status(401).json({ error: "Identifiants incorrects." });
+  }
+
+  if (user.banned) {
+    return res.status(403).json({ error: "Ton compte est banni." });
+  }
+
+  const valid = await bcrypt.compare(password, user.password);
+
+  if (!valid) {
+    return res.status(401).json({ error: "Identifiants incorrects." });
+  }
+
+  res.json({
+    token: createToken(user),
+    user: {
+      id: user.id,
+      username: user.username,
+      role: user.role
+    }
+  });
+});
+
+/* UTILISATEURS */
+app.get("/api/users", auth, (req, res) => {
+  const users = db.prepare(`
+    SELECT id, username, role, banned
+    FROM users
+    WHERE id != ?
+    ORDER BY username
+  `).all(req.user.id);
+
+  res.json(users);
+});
+
+/* CHAT PUBLIC */
+app.get("/api/public-messages", auth, (req, res) => {
+  const messages = db.prepare(`
+    SELECT *
+    FROM public_messages
+    ORDER BY id DESC
+    LIMIT 100
+  `).all().reverse();
+
+  res.json(messages);
+});
+
+/* ENVOYER UNE DEMANDE PRIVÉE */
+app.post("/api/private-request/:userId", auth, (req, res) => {
+  const toUserId = Number(req.params.userId);
+
+  if (!toUserId || toUserId === req.user.id) {
+    return res.status(400).json({ error: "Utilisateur invalide." });
+  }
+
+  const existing = db.prepare(`
+    SELECT * FROM private_requests
+    WHERE from_user_id = ? AND to_user_id = ?
+    AND status = 'pending'
+  `).get(req.user.id, toUserId);
+
+  if (existing) {
+    return res.status(400).json({ error: "Demande déjà envoyée." });
+  }
+
+  db.prepare(`
+    INSERT INTO private_requests (from_user_id, to_user_id)
+    VALUES (?, ?)
+  `).run(req.user.id, toUserId);
+
+  res.json({ success: true });
+});
+
+/* DEMANDES REÇUES */
+app.get("/api/private-requests", auth, (req, res) => {
+  const requests = db.prepare(`
+    SELECT private_requests.*, users.username AS from_username
+    FROM private_requests
+    JOIN users ON users.id = private_requests.from_user_id
+    WHERE private_requests.to_user_id = ?
+    AND private_requests.status = 'pending'
+  `).all(req.user.id);
+
+  res.json(requests);
+});
+
+/* ACCEPTER OU REFUSER */
+app.post("/api/private-request/:id/respond", auth, (req, res) => {
+  const id = Number(req.params.id);
+  const action = req.body.action;
+
+  const request = db.prepare(`
+    SELECT * FROM private_requests
+    WHERE id = ? AND to_user_id = ?
+  `).get(id, req.user.id);
+
+  if (!request || request.status !== "pending") {
+    return res.status(404).json({ error: "Demande introuvable." });
+  }
+
+  if (action === "accept") {
+    db.prepare(`
+      UPDATE private_requests
+      SET status = 'accepted'
+      WHERE id = ?
+    `).run(id);
+
+    return res.json({ success: true, accepted: true });
+  }
+
+  /* Si refusée : elle disparaît complètement */
+  db.prepare(`
+    DELETE FROM private_requests
+    WHERE id = ?
+  `).run(id);
+
+  res.json({ success: true, refused: true });
+});
+
+/* CONVERSATIONS PRIVÉES */
+app.get("/api/private-conversations", auth, (req, res) => {
+  const rows = db.prepare(`
+    SELECT *
+    FROM private_requests
+    WHERE status = 'accepted'
+    AND (from_user_id = ? OR to_user_id = ?)
+  `).all(req.user.id, req.user.id);
+
+  const conversations = rows.map(row => {
+    const otherId =
+      row.from_user_id === req.user.id
+        ? row.to_user_id
+        : row.from_user_id;
+
+    const other = db
+      .prepare("SELECT id, username FROM users WHERE id = ?")
+      .get(otherId);
+
+    return other;
+  });
+
+  res.json(conversations);
+});
+
+/* ADMIN : LISTE UTILISATEURS */
+app.get("/api/admin/users", auth, adminOnly, (req, res) => {
+  const users = db.prepare(`
+    SELECT id, username, role, banned, created_at
+    FROM users
+    ORDER BY id DESC
+  `).all();
+
+  res.json(users);
+});
+
+/* DONNER / RETIRER ADMIN : PROPRIÉTAIRE UNIQUEMENT */
+app.post("/api/admin/users/:id/role", auth, (req, res) => {
+  if (req.user.role !== "owner") {
+    return res.status(403).json({ error: "Réservé au propriétaire." });
+  }
+
+  const id = Number(req.params.id);
+  const role = req.body.role;
+
+  if (!["user", "admin"].includes(role)) {
+    return res.status(400).json({ error: "Rôle invalide." });
+  }
+
+  db.prepare(`
+    UPDATE users SET role = ?
+    WHERE id = ?
+  `).run(role, id);
+
+  res.json({ success: true });
+});
+
+/* BAN */
+app.post("/api/admin/users/:id/ban", auth, adminOnly, (req, res) => {
+  const id = Number(req.params.id);
+
+  const target = db
+    .prepare("SELECT * FROM users WHERE id = ?")
+    .get(id);
+
+  if (!target) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  if (target.role === "owner") {
+    return res.status(403).json({ error: "Impossible de bannir le propriétaire." });
+  }
+
+  db.prepare(`
+    UPDATE users SET banned = 1
+    WHERE id = ?
+  `).run(id);
+
+  res.json({ success: true });
+});
+
+/* DÉBAN */
+app.post("/api/admin/users/:id/unban", auth, adminOnly, (req, res) => {
+  const id = Number(req.params.id);
+
+  db.prepare(`
+    UPDATE users SET banned = 0
+    WHERE id = ?
+  `).run(id);
+
+  res.json({ success: true });
+});
+
+/* SOCKET.IO */
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  const user = getUserFromToken(token);
+
+  if (!user) {
+    return next(new Error("Non autorisé"));
+  }
+
+  const dbUser = db
+    .prepare("SELECT * FROM users WHERE id = ?")
+    .get(user.id);
+
+  if (!dbUser || dbUser.banned) {
+    return next(new Error("Compte indisponible"));
+  }
+
+  socket.user = dbUser;
+  next();
+});
+
+io.on("connection", socket => {
+  socket.join(`user-${socket.user.id}`);
+
+  socket.on("public_message", content => {
+    content = String(content || "").trim().slice(0, 1000);
+
+    if (!content) return;
+
+    const result = db.prepare(`
+      INSERT INTO public_messages (user_id, username, content)
+      VALUES (?, ?, ?)
+    `).run(socket.user.id, socket.user.username, content);
+
+    io.emit("public_message", {
+      id: result.lastInsertRowid,
+      user_id: socket.user.id,
+      username: socket.user.username,
+      content
+    });
+  });
+
+  socket.on("private_message", ({ toUserId, content }) => {
+    content = String(content || "").trim().slice(0, 1000);
+    toUserId = Number(toUserId);
+
+    if (!content || !toUserId) return;
+
+    const allowed = db.prepare(`
+      SELECT * FROM private_requests
+      WHERE status = 'accepted'
+      AND (
+        (from_user_id = ? AND to_user_id = ?)
+        OR
+        (from_user_id = ? AND to_user_id = ?)
+      )
+    `).get(socket.user.id, toUserId, toUserId, socket.user.id);
+
+    if (!allowed) return;
+
+    const result = db.prepare(`
+      INSERT INTO private_messages (from_user_id, to_user_id, content)
+      VALUES (?, ?, ?)
+    `).run(socket.user.id, toUserId, content);
+
+    const message = {
+      id: result.lastInsertRowid,
+      fromUserId: socket.user.id,
+      toUserId,
+      content
+    };
+
+    socket.emit("private_message", message);
+    socket.to(`user-${toUserId}`).emit("private_message", message);
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`DiscuteApp démarré : http://localhost:${PORT}`);
+});
