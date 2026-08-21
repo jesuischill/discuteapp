@@ -244,6 +244,336 @@ app.get("/api/users", auth, (req, res) => {
 });
 
 
+
+
+/* BOUTIQUE : achats permanents */
+db.exec(`
+  CREATE TABLE IF NOT EXISTS purchases (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    item_id TEXT NOT NULL,
+    item_type TEXT NOT NULL,
+    item_name TEXT NOT NULL,
+    item_data TEXT DEFAULT '{}',
+    price INTEGER NOT NULL,
+    active INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, item_id)
+  )
+`);
+
+const SHOP_ITEMS = {
+  title_bg:       { price: 5000,     type: "title", name: "BG" },
+  title_chill:    { price: 1000,     type: "title", name: "Chill" },
+  title_admin:    { price: 50000,    type: "title", name: "👑 Admin" },
+  title_custom:   { price: 30000,    type: "title", name: "Titre personnalisé" },
+
+  image_ninja:    { price: 1000,     type: "image", name: "Ninja anime" },
+  image_gojo:     { price: 5000,     type: "image", name: "Magicien aux yeux bleus" },
+  image_monster:  { price: 10000,    type: "image", name: "Monstre" },
+  image_custom:   { price: 30000,    type: "image", name: "Image personnalisée" },
+  image_collection:{price: 50000,    type: "image", name: "Collection 50 images" },
+  image_royal:    { price: 100000,   type: "image", name: "Image Royale" },
+
+  color_red:      { price: 10000,    type: "color", name: "Rouge" },
+  color_blue:     { price: 10000,    type: "color", name: "Bleu" },
+  color_green:    { price: 10000,    type: "color", name: "Vert" },
+  color_purple:   { price: 10000,    type: "color", name: "Violet" },
+  color_pink:     { price: 10000,    type: "color", name: "Rose" },
+  color_orange:   { price: 10000,    type: "color", name: "Orange" },
+  color_cyan:     { price: 10000,    type: "color", name: "Cyan" },
+  color_brown:    { price: 10000,    type: "color", name: "Marron" },
+  color_black:    { price: 10000,    type: "color", name: "Noir" },
+  color_gray:     { price: 10000,    type: "color", name: "Gris" },
+  color_gold:     { price: 50000,    type: "color", name: "Doré brillant" },
+
+  admin_panel:    { price: 10000000, type: "admin_panel", name: "Panneau Admin" }
+};
+
+app.post("/api/shop/buy", auth, (req, res) => {
+  const { itemId, data = {} } = req.body || {};
+  const item = SHOP_ITEMS[itemId];
+
+  if (!item) {
+    return res.status(400).json({ error: "Objet invalide." });
+  }
+
+  const alreadyOwned = db.prepare(`
+    SELECT id FROM purchases
+    WHERE user_id = ? AND item_id = ?
+  `).get(req.user.id, itemId);
+
+  if (alreadyOwned) {
+    return res.status(400).json({ error: "Tu possèdes déjà cet objet." });
+  }
+
+  const buy = db.transaction(() => {
+    const user = db.prepare(`
+      SELECT id, username, gems FROM users WHERE id = ?
+    `).get(req.user.id);
+
+    if (!user) throw new Error("Utilisateur introuvable.");
+
+    if ((user.gems || 0) < item.price) {
+      throw new Error("Tu n'as pas assez de gemmes.");
+    }
+
+    db.prepare(`
+      UPDATE users
+      SET gems = gems - ?
+      WHERE id = ?
+    `).run(item.price, user.id);
+
+    db.prepare(`
+      INSERT INTO purchases
+      (user_id, item_id, item_type, item_name, item_data, price)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      user.id,
+      itemId,
+      item.type,
+      item.name,
+      JSON.stringify(data),
+      item.price
+    );
+
+    return db.prepare(`
+      SELECT gems FROM users WHERE id = ?
+    `).get(user.id);
+  });
+
+  try {
+    const result = buy();
+
+    res.json({
+      message: `${item.name} acheté avec succès !`,
+      gems: result.gems
+    });
+  } catch (error) {
+    res.status(400).json({ error: error.message || "Achat impossible." });
+  }
+});
+
+
+
+/* CLASSEMENT : utilisateurs avec le plus de gemmes */
+app.get("/api/rankings/gems", auth, (req, res) => {
+  const users = db.prepare(`
+    SELECT username, COALESCE(gems, 0) AS gems
+    FROM users
+    WHERE banned = 0
+    ORDER BY gems DESC, username ASC
+    LIMIT 50
+  `).all();
+
+  res.json(users);
+});
+
+/* CLASSEMENT : utilisateurs avec le plus d'accessoires achetés */
+app.get("/api/rankings/accessories", auth, (req, res) => {
+  const users = db.prepare(`
+    SELECT
+      u.username,
+      COUNT(p.id) AS accessories
+    FROM users u
+    LEFT JOIN purchases p ON p.user_id = u.id
+    WHERE u.banned = 0
+    GROUP BY u.id, u.username
+    HAVING COUNT(p.id) > 0
+    ORDER BY accessories DESC, u.username ASC
+    LIMIT 50
+  `).all();
+
+  res.json(users);
+});
+
+/* ACCESSOIRES : voir les achats */
+app.get("/api/accessories", auth, (req, res) => {
+  const items = db.prepare(`
+    SELECT id, item_id, item_type, item_name, item_data, price, active, created_at
+    FROM purchases
+    WHERE user_id = ?
+    ORDER BY created_at DESC, id DESC
+  `).all(req.user.id).map(item => ({
+    ...item,
+    active: Boolean(item.active),
+    data: (() => {
+      try {
+        return JSON.parse(item.item_data || "{}");
+      } catch {
+        return {};
+      }
+    })()
+  }));
+
+  res.json(items);
+});
+
+/* ACCESSOIRES : activer ou désactiver */
+app.post("/api/accessories/:id/toggle", auth, (req, res) => {
+  const purchaseId = Number(req.params.id);
+
+  const item = db.prepare(`
+    SELECT id, item_id, item_type, active
+    FROM purchases
+    WHERE id = ? AND user_id = ?
+  `).get(purchaseId, req.user.id);
+
+  if (!item) {
+    return res.status(404).json({ error: "Accessoire introuvable." });
+  }
+
+  const newActive = item.active ? 0 : 1;
+
+  const toggle = db.transaction(() => {
+    if (newActive && ["title", "image", "color"].includes(item.item_type)) {
+      db.prepare(`
+        UPDATE purchases
+        SET active = 0
+        WHERE user_id = ? AND item_type = ?
+      `).run(req.user.id, item.item_type);
+    }
+
+    db.prepare(`
+      UPDATE purchases
+      SET active = ?
+      WHERE id = ? AND user_id = ?
+    `).run(newActive, purchaseId, req.user.id);
+  });
+
+  toggle();
+
+  res.json({
+    message: newActive ? "Accessoire activé !" : "Accessoire désactivé !",
+    active: Boolean(newActive),
+    itemId: item.item_id
+  });
+});
+
+app.get("/api/my-gems", auth, (req, res) => {
+  const user = db.prepare(
+    "SELECT gems FROM users WHERE id = ?"
+  ).get(req.user.id);
+
+  res.json({
+    gems: user ? (user.gems || 0) : 0
+  });
+});
+
+
+/* JEUX ET GEMMES */
+
+const GAME_CONFIG = {
+  1: { price: 0, reward: 10 },
+  2: { price: 100, reward: 500 },
+  3: { price: 5000, reward: 1000 },
+  4: { price: 500000, reward: 10000 },
+  5: { price: 1000000, reward: 50000 }
+};
+
+app.get("/api/games/unlocked", auth, (req, res) => {
+  const games = db.prepare(`
+    SELECT game_id
+    FROM unlocked_games
+    WHERE user_id = ?
+  `).all(req.user.id);
+
+  res.json({
+    unlocked: [1, ...games.map(game => game.game_id)]
+  });
+});
+
+app.post("/api/games/unlock", auth, (req, res) => {
+  const gameId = Number(req.body.gameId);
+  const game = GAME_CONFIG[gameId];
+
+  if (!game || gameId === 1) {
+    return res.status(400).json({ error: "Jeu invalide." });
+  }
+
+  const user = db.prepare(
+    "SELECT gems FROM users WHERE id = ?"
+  ).get(req.user.id);
+
+  if (!user || (user.gems || 0) < game.price) {
+    return res.status(400).json({
+      error: "Tu n'as pas assez de gemmes."
+    });
+  }
+
+  const alreadyUnlocked = db.prepare(`
+    SELECT id FROM unlocked_games
+    WHERE user_id = ? AND game_id = ?
+  `).get(req.user.id, gameId);
+
+  if (alreadyUnlocked) {
+    return res.status(400).json({
+      error: "Ce jeu est déjà débloqué."
+    });
+  }
+
+  const transaction = db.transaction(() => {
+    db.prepare(`
+      UPDATE users
+      SET gems = gems - ?
+      WHERE id = ?
+    `).run(game.price, req.user.id);
+
+    db.prepare(`
+      INSERT INTO unlocked_games (user_id, game_id)
+      VALUES (?, ?)
+    `).run(req.user.id, gameId);
+  });
+
+  transaction();
+
+  const updated = db.prepare(
+    "SELECT gems FROM users WHERE id = ?"
+  ).get(req.user.id);
+
+  res.json({
+    message: `Jeu ${gameId} débloqué !`,
+    gems: updated.gems
+  });
+});
+
+app.post("/api/games/reward", auth, (req, res) => {
+  const gameId = Number(req.body.gameId);
+  const game = GAME_CONFIG[gameId];
+
+  if (!game) {
+    return res.status(400).json({ error: "Jeu invalide." });
+  }
+
+  if (gameId > 1) {
+    const unlocked = db.prepare(`
+      SELECT id FROM unlocked_games
+      WHERE user_id = ? AND game_id = ?
+    `).get(req.user.id, gameId);
+
+    if (!unlocked) {
+      return res.status(403).json({
+        error: "Tu dois d'abord débloquer ce jeu."
+      });
+    }
+  }
+
+  db.prepare(`
+    UPDATE users
+    SET gems = COALESCE(gems, 0) + ?
+    WHERE id = ?
+  `).run(game.reward, req.user.id);
+
+  const updated = db.prepare(
+    "SELECT gems FROM users WHERE id = ?"
+  ).get(req.user.id);
+
+  res.json({
+    message: `Tu as gagné ${game.reward} 💎 !`,
+    gems: updated.gems
+  });
+});
+
 /* CLUBS */
 
 app.get("/api/clubs", auth, (req, res) => {
@@ -310,6 +640,7 @@ app.get("/api/clubs/ranking", auth, (req, res) => {
       (SELECT COUNT(*) FROM club_comments WHERE club_id = c.id) AS comments
     FROM clubs c
     ORDER BY likes DESC, subscribers DESC, comments DESC, c.created_at ASC
+    LIMIT 50
   `).all();
 
   res.json(clubs);
@@ -733,6 +1064,108 @@ app.post("/api/admin/users/:id/role", auth, (req, res) => {
 
 
 
+
+/* BOUTIQUE : vérifie le panneau Admin 💎 activé */
+function shopAdminOnly(req, res, next) {
+  const panel = db.prepare(`
+    SELECT id
+    FROM purchases
+    WHERE user_id = ?
+      AND item_id = 'admin_panel'
+      AND active = 1
+  `).get(req.user.id);
+
+  if (!panel) {
+    return res.status(403).json({
+      error: "Tu dois acheter et activer le Panneau Admin 💎."
+    });
+  }
+
+  next();
+}
+
+/* ADMIN 💎 : bannir */
+app.post("/api/shop-admin/ban", auth, shopAdminOnly, (req, res) => {
+  const username = String(req.body.username || "").trim();
+
+  const user = db.prepare(
+    "SELECT id, username FROM users WHERE username = ?"
+  ).get(username);
+
+  if (!user) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  if (user.id === req.user.id) {
+    return res.status(400).json({ error: "Tu ne peux pas te bannir toi-même." });
+  }
+
+  db.prepare(
+    "UPDATE users SET banned = 1 WHERE id = ?"
+  ).run(user.id);
+
+  addPublicMessage(
+    "🛡️ Admin 💎",
+    `${req.user.username} a banni ${user.username}.`
+  );
+
+  res.json({ message: `${user.username} a été banni.` });
+});
+
+/* ADMIN 💎 : débannir */
+app.post("/api/shop-admin/unban", auth, shopAdminOnly, (req, res) => {
+  const username = String(req.body.username || "").trim();
+
+  const user = db.prepare(
+    "SELECT id, username FROM users WHERE username = ?"
+  ).get(username);
+
+  if (!user) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  db.prepare(
+    "UPDATE users SET banned = 0 WHERE id = ?"
+  ).run(user.id);
+
+  addPublicMessage(
+    "🛡️ Admin 💎",
+    `${req.user.username} a débanni ${user.username}.`
+  );
+
+  res.json({ message: `${user.username} a été débanni.` });
+});
+
+/* ADMIN 💎 : supprimer les messages d'un utilisateur */
+app.post("/api/shop-admin/delete-messages", auth, shopAdminOnly, (req, res) => {
+  const username = String(req.body.username || "").trim();
+
+  const user = db.prepare(
+    "SELECT id, username FROM users WHERE username = ?"
+  ).get(username);
+
+  if (!user) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  const result = db.prepare(`
+    DELETE FROM public_messages
+    WHERE user_id = ? OR username = ?
+  `).run(user.id, user.username);
+
+  addPublicMessage(
+    "🛡️ Admin 💎",
+    `${req.user.username} a supprimé ${result.changes} message(s) de ${user.username}.`
+  );
+
+  io.emit("public_messages_cleared");
+
+  res.json({
+    message: `${result.changes} message(s) supprimé(s).`
+  });
+});
+
+
 /* ADMIN : SUPPRIMER LES MESSAGES D'UN UTILISATEUR */
 app.post("/api/admin/public-messages/user", auth, adminOnly, (req, res) => {
   const username = String(req.body.username || "").trim();
@@ -870,6 +1303,94 @@ app.post("/api/admin/users/:id/ban", auth, adminOnly, (req, res) => {
 });
 
 /* DÉBAN */
+
+
+function sendAdminGemMessage(content) {
+  const owner = db.prepare(
+    "SELECT id, username FROM users WHERE role = 'owner' LIMIT 1"
+  ).get();
+
+  if (!owner) return;
+
+  const result = db.prepare(`
+    INSERT INTO public_messages (user_id, username, content)
+    VALUES (?, ?, ?)
+  `).run(owner.id, "💎 ADMIN", content);
+
+  io.emit("public_message", {
+    id: result.lastInsertRowid,
+    user_id: owner.id,
+    username: "💎 ADMIN",
+    content,
+    created_at: new Date().toISOString()
+  });
+}
+
+app.post("/api/admin/gems/add", auth, adminOnly, (req, res) => {
+  const { username, amount } = req.body;
+  const gems = Number(amount);
+
+  if (!username || !Number.isInteger(gems) || gems <= 0) {
+    return res.status(400).json({ error: "Pseudo ou nombre de gemmes invalide." });
+  }
+
+  const user = db.prepare("SELECT id, username, gems FROM users WHERE username = ?")
+    .get(username.trim());
+
+  if (!user) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  db.prepare("UPDATE users SET gems = COALESCE(gems, 0) + ? WHERE id = ?")
+    .run(gems, user.id);
+
+  const updated = db.prepare("SELECT username, gems FROM users WHERE id = ?")
+    .get(user.id);
+
+  sendAdminGemMessage(
+    `${req.user.username} a donné ${gems} 💎 à ${updated.username}.`
+  );
+
+  res.json({
+    message: `${gems} gemmes ajoutées à ${updated.username}.`,
+    gems: updated.gems
+  });
+});
+
+app.post("/api/admin/gems/remove", auth, adminOnly, (req, res) => {
+  const { username, amount } = req.body;
+  const gems = Number(amount);
+
+  if (!username || !Number.isInteger(gems) || gems <= 0) {
+    return res.status(400).json({ error: "Pseudo ou nombre de gemmes invalide." });
+  }
+
+  const user = db.prepare("SELECT id, username, gems FROM users WHERE username = ?")
+    .get(username.trim());
+
+  if (!user) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  db.prepare(`
+    UPDATE users
+    SET gems = MAX(0, COALESCE(gems, 0) - ?)
+    WHERE id = ?
+  `).run(gems, user.id);
+
+  const updated = db.prepare("SELECT username, gems FROM users WHERE id = ?")
+    .get(user.id);
+
+  sendAdminGemMessage(
+    `${req.user.username} a retiré ${gems} 💎 à ${updated.username}.`
+  );
+
+  res.json({
+    message: `${gems} gemmes retirées à ${updated.username}.`,
+    gems: updated.gems
+  });
+});
+
 app.post("/api/admin/users/:id/unban", auth, adminOnly, (req, res) => {
   const id = Number(req.params.id);
   const target = getDbUser(id);
@@ -942,11 +1463,36 @@ io.on("connection", socket => {
       VALUES (?, ?, ?)
     `).run(freshUser.id, freshUser.username, content);
 
+    const accessories = db.prepare(`
+      SELECT item_id, item_type, item_name, item_data
+      FROM purchases
+      WHERE user_id = ? AND active = 1
+    `).all(freshUser.id);
+
+    const activeAccessories = {};
+
+    for (const item of accessories) {
+      let data = {};
+
+      try {
+        data = JSON.parse(item.item_data || "{}");
+      } catch {
+        data = {};
+      }
+
+      activeAccessories[item.item_type] = {
+        itemId: item.item_id,
+        name: item.item_name,
+        data
+      };
+    }
+
     io.emit("public_message", {
       id: result.lastInsertRowid,
       user_id: freshUser.id,
       username: freshUser.username,
-      content
+      content,
+      accessories: activeAccessories
     });
   });
 

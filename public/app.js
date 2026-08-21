@@ -1,8 +1,5 @@
-// Toujours démarrer avec une session vide
-localStorage.removeItem("discuteapp_token");
-localStorage.removeItem("discuteapp_user");
-
-let token = null;
+// Restaurer la session si elle existe
+let token = localStorage.getItem("discuteapp_token");
 let me = null;
 let socket = null;
 let currentPrivateUser = null;
@@ -135,11 +132,12 @@ function startApp() {
 
     if (chat) {
       addMessage(
-  "publicChat",
-  message.username,
-  message.content,
-  message.created_at
-);
+        "publicChat",
+        message.username,
+        message.content,
+        message.created_at,
+        message.accessories || {}
+      );
     }
   });
 
@@ -213,6 +211,27 @@ function startApp() {
 
   loadConversations();
   showPublic();
+  updateShopAdminButton();
+}
+
+
+async function updateShopAdminButton() {
+  const button = document.getElementById("shopAdminButton");
+
+  if (!button || !token) return;
+
+  try {
+    const data = await api("/api/accessories");
+
+    const hasActivePanel = data.some(item =>
+      item.item_id === "admin_panel" && item.active
+    );
+
+    button.classList.toggle("hidden", !hasActivePanel);
+
+  } catch (error) {
+    button.classList.add("hidden");
+  }
 }
 
 async function showPublic() {
@@ -242,18 +261,99 @@ async function showPublic() {
   }
 }
 
-function addMessage(containerId, username, content, createdAt = null) {
+function addMessage(
+  containerId,
+  username,
+  content,
+  createdAt = null,
+  accessories = {}
+) {
   const container = document.getElementById(containerId);
   if (!container) return;
 
   const element = document.createElement("div");
   element.className = "message";
 
+  const imageAccessory = accessories.image;
+  const titleAccessory = accessories.title;
+  const colorAccessory = accessories.color;
+
+  const nameRow = document.createElement("div");
+  nameRow.style.display = "flex";
+  nameRow.style.alignItems = "center";
+  nameRow.style.gap = "8px";
+
+  if (imageAccessory) {
+    const image = document.createElement("span");
+
+    const imageMap = {
+      image_ninja: "🍥",
+      image_gojo: "👁️",
+      image_monster: "👹",
+      image_custom: "🖼️",
+      image_collection: "🎭",
+      image_royal: "👑"
+    };
+
+    image.textContent =
+      imageMap[imageAccessory.itemId] || "🖼️";
+
+    image.style.fontSize = "28px";
+    nameRow.appendChild(image);
+  }
+
   const name = document.createElement("strong");
   name.textContent = username;
+  nameRow.appendChild(name);
 
   const text = document.createElement("div");
   text.textContent = content;
+
+  if (colorAccessory) {
+    const colorMap = {
+      color_red: "red",
+      color_blue: "blue",
+      color_green: "green",
+      color_purple: "purple",
+      color_pink: "hotpink",
+      color_orange: "orange",
+      color_cyan: "cyan",
+      color_brown: "brown",
+      color_black: "black",
+      color_gray: "#777",
+      color_gold: "#b8860b"
+    };
+
+    text.style.color =
+      colorMap[colorAccessory.itemId] || "";
+
+    if (colorAccessory.itemId === "color_gold") {
+      text.style.fontWeight = "bold";
+      text.style.textShadow = "0 0 8px #ffd700";
+    }
+  }
+
+  let title = null;
+
+  if (titleAccessory) {
+    title = document.createElement("div");
+    title.style.fontSize = "13px";
+    title.style.marginTop = "3px";
+
+    if (titleAccessory.itemId === "title_custom") {
+      title.textContent =
+        titleAccessory.data.title || "Titre personnalisé";
+      title.style.color =
+        titleAccessory.data.color || "#555";
+    } else {
+      title.textContent = titleAccessory.name;
+
+      if (titleAccessory.itemId === "title_admin") {
+        title.style.color = "#b8860b";
+        title.style.fontWeight = "bold";
+      }
+    }
+  }
 
   const time = document.createElement("small");
   time.className = "message-time";
@@ -265,7 +365,13 @@ function addMessage(containerId, username, content, createdAt = null) {
     minute: "2-digit"
   });
 
-  element.append(name, text, time);
+  element.append(nameRow);
+
+  if (title) {
+    element.appendChild(title);
+  }
+
+  element.append(text, time);
   container.appendChild(element);
   container.scrollTop = container.scrollHeight;
 }
@@ -529,6 +635,27 @@ function sendPrivate() {
   input.value = "";
 }
 
+
+async function showGems() {
+  try {
+    const data = await api("/api/my-gems");
+
+    me.gems = data.gems || 0;
+
+    document.getElementById("content").innerHTML = `
+      <h1>💎 Mes Gemmes</h1>
+
+      <div class="card">
+        <h2>💎 ${me.gems}</h2>
+        <p>Voici ton nombre actuel de gemmes.</p>
+        <p>Tu pourras bientôt gagner des gemmes dans 🎮 Jeux.</p>
+      </div>
+    `;
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 async function showAdmin() {
   if (!["owner", "admin"].includes(me.role)) {
     alert("Accès refusé.");
@@ -574,6 +701,42 @@ async function showAdmin() {
     );
 
     container.appendChild(deleteUserMessagesBox);
+
+    const gemsBox = document.createElement("div");
+    gemsBox.className = "card";
+
+    const gemsTitle = document.createElement("strong");
+    gemsTitle.textContent = "💎 Gérer les gemmes";
+
+    const gemsUser = document.createElement("input");
+    gemsUser.id = "gemsUsername";
+    gemsUser.placeholder = "Entrer le pseudo";
+
+    const gemsAmount = document.createElement("input");
+    gemsAmount.id = "gemsAmount";
+    gemsAmount.type = "number";
+    gemsAmount.min = "1";
+    gemsAmount.placeholder = "Nombre de gemmes";
+
+    const addGemsButton = document.createElement("button");
+    addGemsButton.textContent = "➕ Donner des gemmes";
+    addGemsButton.onclick = () => manageGems("add");
+
+    const removeGemsButton = document.createElement("button");
+    removeGemsButton.textContent = "➖ Retirer des gemmes";
+    removeGemsButton.className = "danger";
+    removeGemsButton.onclick = () => manageGems("remove");
+
+    gemsBox.append(
+      gemsTitle,
+      gemsUser,
+      gemsAmount,
+      addGemsButton,
+      removeGemsButton
+    );
+
+    container.appendChild(gemsBox);
+
 
     users.forEach(user => {
       const card = document.createElement("div");
@@ -628,6 +791,45 @@ async function showAdmin() {
 }
 
 
+
+
+async function manageGems(action) {
+  const username = document.getElementById("gemsUsername").value.trim();
+  const amount = Number(document.getElementById("gemsAmount").value);
+
+  if (!username) {
+    alert("Entre le pseudo de l'utilisateur.");
+    return;
+  }
+
+  if (!Number.isInteger(amount) || amount <= 0) {
+    alert("Entre un nombre de gemmes valide.");
+    return;
+  }
+
+  try {
+    const endpoint =
+      action === "add"
+        ? "/api/admin/gems/add"
+        : "/api/admin/gems/remove";
+
+    const result = await api(endpoint, {
+      method: "POST",
+      body: JSON.stringify({
+        username,
+        amount
+      })
+    });
+
+    alert(
+      `✅ ${result.message}\nSolde actuel : 💎 ${result.gems}`
+    );
+
+    await showAdmin();
+  } catch (error) {
+    alert(error.message);
+  }
+}
 
 async function deleteUserPublicMessages() {
   const input = document.getElementById("deleteMessagesUsername");
@@ -801,40 +1003,110 @@ async function createClub() {
 
 async function showRanking() {
   content.innerHTML = `
-    <h1>🥇 Classement des clubs</h1>
-    <div id="rankingList">
-      <p>Chargement du classement...</p>
+    <h1>🥇 Classements</h1>
+
+    <div class="rankings-columns">
+      <div class="card ranking-column">
+        <h2>🏆 Top 50 Clubs</h2>
+        <div id="clubsRanking">
+          <p>Chargement...</p>
+        </div>
+        <p class="ranking-end">🏁 Fin du Top 50</p>
+      </div>
+
+      <div class="card ranking-column">
+        <h2>💎 Top 50 Gemmes</h2>
+        <div id="gemsRanking">
+          <p>Chargement...</p>
+        </div>
+        <p class="ranking-end">🏁 Fin du Top 50</p>
+      </div>
+
+      <div class="card ranking-column">
+        <h2>🎒 Top 50 Accessoires</h2>
+        <div id="accessoriesRanking">
+          <p>Chargement...</p>
+        </div>
+        <p class="ranking-end">🏁 Fin du Top 50</p>
+      </div>
     </div>
   `;
 
   try {
-    const clubs = await api("/api/clubs/ranking");
-    const list = document.getElementById("rankingList");
+    const [clubs, gemsUsers, accessoriesUsers] = await Promise.all([
+      api("/api/clubs/ranking"),
+      api("/api/rankings/gems"),
+      api("/api/rankings/accessories")
+    ]);
+
+    const clubsList = document.getElementById("clubsRanking");
 
     if (!clubs.length) {
-      list.innerHTML = "<p>Aucun club à classer pour le moment.</p>";
-      return;
+      clubsList.innerHTML = "<p>Aucun club à classer pour le moment.</p>";
+    } else {
+      clubsList.innerHTML = "";
+
+      clubs.forEach((club, index) => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+          <h3>#${index + 1} 🏆 ${escapeHtml(club.name)}</h3>
+          <p>${escapeHtml(club.description)}</p>
+          <p>👍 ${club.likes || 0} · 🔔 ${club.subscribers || 0} · 💬 ${club.comments || 0}</p>
+        `;
+
+        clubsList.appendChild(card);
+      });
     }
 
-    list.innerHTML = "";
+    const gemsList = document.getElementById("gemsRanking");
 
-    clubs.forEach((club, index) => {
-      const card = document.createElement("div");
-      card.className = "card";
+    if (!gemsUsers.length) {
+      gemsList.innerHTML = "<p>Aucun joueur à classer.</p>";
+    } else {
+      gemsList.innerHTML = "";
 
-      card.innerHTML = `
-        <h2>#${index + 1} 🏆 ${escapeHtml(club.name)}</h2>
-        <p>${escapeHtml(club.description)}</p>
-        <p>👍 ${club.likes || 0} · 🔔 ${club.subscribers || 0} · 💬 ${club.comments || 0}</p>
-      `;
+      gemsUsers.forEach((user, index) => {
+        const row = document.createElement("div");
+        row.className = "card";
 
-      list.appendChild(card);
-    });
+        row.innerHTML = `
+          <h3>#${index + 1} 💎 ${escapeHtml(user.username)}</h3>
+          <p><strong>${user.gems}</strong> gemmes</p>
+        `;
+
+        gemsList.appendChild(row);
+      });
+    }
+
+    const accessoriesList = document.getElementById("accessoriesRanking");
+
+    if (!accessoriesUsers.length) {
+      accessoriesList.innerHTML =
+        "<p>Aucun utilisateur n'a encore acheté d'accessoire.</p>";
+    } else {
+      accessoriesList.innerHTML = "";
+
+      accessoriesUsers.forEach((user, index) => {
+        const row = document.createElement("div");
+        row.className = "card";
+
+        row.innerHTML = `
+          <h3>#${index + 1} 🎒 ${escapeHtml(user.username)}</h3>
+          <p><strong>${user.accessories}</strong> accessoire(s) acheté(s)</p>
+        `;
+
+        accessoriesList.appendChild(row);
+      });
+    }
+
   } catch (error) {
-    content.innerHTML += `<p>${escapeHtml(error.message)}</p>`;
+    content.innerHTML += `
+      <p>❌ ${escapeHtml(error.message)}</p>
+    `;
   }
 }
-
 async function openClub(id) {
   content.innerHTML = `
     <h1>🏆 Club</h1>
@@ -981,4 +1253,64 @@ async function addClubComment(id) {
 
 if (token && me) {
   startApp();
+}
+
+async function showShopAdmin() {
+  document.getElementById("content").innerHTML = `
+    <h1>🛡️ Admin 💎</h1>
+    <p>🎫 Panneau Admin acheté dans la boutique.</p>
+
+    <div class="card">
+      <h3>👤 Gérer un utilisateur</h3>
+
+      <input
+        id="shopAdminUsername"
+        placeholder="Entrer le pseudo"
+      >
+
+      <div class="row">
+        <button onclick="shopAdminAction('ban')">
+          🚫 Bannir
+        </button>
+
+        <button onclick="shopAdminAction('unban')">
+          ✅ Débannir
+        </button>
+
+        <button class="danger" onclick="shopAdminAction('deleteMessages')">
+          🗑️ Supprimer ses messages
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+async function shopAdminAction(action) {
+  const username = document
+    .getElementById("shopAdminUsername")
+    .value
+    .trim();
+
+  if (!username) {
+    alert("❌ Entre un pseudo.");
+    return;
+  }
+
+  const routes = {
+    ban: "/api/shop-admin/ban",
+    unban: "/api/shop-admin/unban",
+    deleteMessages: "/api/shop-admin/delete-messages"
+  };
+
+  try {
+    const result = await api(routes[action], {
+      method: "POST",
+      body: JSON.stringify({ username })
+    });
+
+    alert("✅ " + result.message);
+
+  } catch (error) {
+    alert("❌ " + error.message);
+  }
 }

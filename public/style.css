@@ -3,6 +3,17 @@
 }
 
 body {
+  background:
+    radial-gradient(circle at 80% 15%, rgba(255,255,255,0.8) 0%, transparent 18%),
+    linear-gradient(to bottom,
+      #87ceeb 0%,
+      #bfe8f5 38%,
+      #f5d9a7 39%,
+      #e8c07d 62%,
+      #4ba3c7 63%,
+      #176b93 100%);
+  background-attachment: fixed;
+  background-attachment: fixed;
   margin: 0;
   font-family: Arial, sans-serif;
   background: #f4f5f7;
@@ -131,4 +142,37 @@ aside button {
   font-size: 12px;
   color: #777;
   text-align: right;
+}
+
+/* ===== CLASSEMENTS EN 3 COLONNES ===== */
+.rankings-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.ranking-column {
+  min-width: 0;
+}
+
+.ranking-column h2 {
+  text-align: center;
+}
+
+.ranking-column .card {
+  margin: 10px 0;
+}
+
+.ranking-end {
+  text-align: center;
+  font-weight: bold;
+  margin-top: 20px;
+}
+
+/* Sur petit écran, les colonnes passent l'une sous l'autre */
+@media (max-width: 900px) {
+  .rankings-columns {
+    grid-template-columns: 1fr;
+  }
 }

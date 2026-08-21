@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎒 Accessoires - DiscuteApp</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: #f4f4f4;
+      color: #222;
+    }
+
+    header {
+      text-align: center;
+      padding: 30px 20px;
+    }
+
+    #items {
+      max-width: 900px;
+      margin: auto;
+      padding: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+    }
+
+    .item {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 5px 20px rgba(0,0,0,.12);
+    }
+
+    .active {
+      border: 3px solid #22c55e;
+    }
+
+    button {
+      border: none;
+      padding: 11px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .empty {
+      text-align: center;
+      grid-column: 1 / -1;
+      font-size: 18px;
+    }
+
+    .status {
+      font-weight: bold;
+      margin: 12px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🎒 Mes Accessoires</h1>
+    <p>Retrouve ici tous tes objets achetés.</p>
+    <p>Tu peux les activer ou les désactiver, mais jamais les supprimer.</p>
+  </header>
+
+  <main id="items">
+    <p class="empty">Chargement...</p>
+  </main>
+
+  <script>
+    const token = localStorage.getItem("discuteapp_token");
+    const itemsContainer = document.getElementById("items");
+
+    if (!token) {
+      itemsContainer.innerHTML =
+        '<p class="empty">❌ Tu dois être connecté pour voir tes accessoires.</p>';
+    } else {
+      loadAccessories();
+    }
+
+    async function loadAccessories() {
+      try {
+        const response = await fetch("/api/accessories", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        const items = await response.json();
+
+        if (!response.ok) {
+          throw new Error(items.error || "Erreur");
+        }
+
+        if (!items.length) {
+          itemsContainer.innerHTML =
+            '<p class="empty">🎒 Tu n\'as encore acheté aucun accessoire.</p>';
+          return;
+        }
+
+        itemsContainer.innerHTML = "";
+
+        items.forEach(item => {
+          const card = document.createElement("div");
+          card.className = "item" + (item.active ? " active" : "");
+
+          const icon =
+            item.item_type === "title" ? "🏷️" :
+            item.item_type === "image" ? "🖼️" :
+            item.item_type === "color" ? "🎨" :
+            item.item_type === "admin_panel" ? "🛡️" :
+            "🎒";
+
+          const status = item.active
+            ? "🟢 Activé"
+            : "⚪ Désactivé";
+
+          card.innerHTML = `
+            <div style="font-size:40px">${icon}</div>
+            <h3></h3>
+            <p class="status">${status}</p>
+            <button></button>
+          `;
+
+          card.querySelector("h3").textContent = item.item_name;
+
+          const button = card.querySelector("button");
+          button.textContent = item.active
+            ? "🔴 Désactiver"
+            : "🟢 Activer";
+
+          button.onclick = () => toggleAccessory(item.id);
+
+          itemsContainer.appendChild(card);
+        });
+
+      } catch (error) {
+        itemsContainer.innerHTML =
+          `<p class="empty">❌ ${error.message}</p>`;
+      }
+    }
+
+    async function toggleAccessory(id) {
+      try {
+        const response = await fetch(`/api/accessories/${id}/toggle`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur");
+        }
+
+        loadAccessories();
+
+      } catch (error) {
+        alert("❌ " + error.message);
+      }
+    }
+  </script>
+
+</body>
+</html>
