@@ -134,7 +134,12 @@ function startApp() {
     const chat = document.getElementById("publicChat");
 
     if (chat) {
-      addMessage("publicChat", message.username, message.content);
+      addMessage(
+  "publicChat",
+  message.username,
+  message.content,
+  message.created_at
+);
     }
   });
 
@@ -237,9 +242,8 @@ async function showPublic() {
   }
 }
 
-function addMessage(containerId, username, content) {
+function addMessage(containerId, username, content, createdAt = null) {
   const container = document.getElementById(containerId);
-
   if (!container) return;
 
   const element = document.createElement("div");
@@ -251,9 +255,18 @@ function addMessage(containerId, username, content) {
   const text = document.createElement("div");
   text.textContent = content;
 
-  element.append(name, text);
-  container.appendChild(element);
+  const time = document.createElement("small");
+  time.className = "message-time";
 
+  const date = createdAt ? new Date(createdAt) : new Date();
+
+  time.textContent = date.toLocaleTimeString("fr-FR", {
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+
+  element.append(name, text, time);
+  container.appendChild(element);
   container.scrollTop = container.scrollHeight;
 }
 
