@@ -178,6 +178,13 @@ function startApp() {
     loadConversations();
   });
 
+  socket.on("user_status_changed", () => {
+    const title = document.querySelector("#content h1");
+    if (title && title.textContent === "👥 Utilisateurs") {
+      showUsers();
+    }
+  });
+
   socket.on("public_messages_cleared", () => {
     const chat = document.getElementById("publicChat");
     if (chat) chat.innerHTML = "";
@@ -287,11 +294,16 @@ async function showUsers() {
       role.textContent =
         user.role === "admin" ? "🛡️ Administrateur" : "👤 Utilisateur";
 
+      const status = document.createElement("p");
+      status.textContent = user.online
+        ? "🟢 Connecté"
+        : "🔴 Hors ligne";
+
       const button = document.createElement("button");
       button.textContent = "Envoyer une demande privée";
       button.onclick = () => sendRequest(user.id);
 
-      card.append(name, role, button);
+      card.append(name, role, status, button);
       list.appendChild(card);
     });
   } catch (error) {
@@ -695,6 +707,264 @@ async function unbanUser(id) {
     alert(error.message);
   }
 }
+
+
+
+function escapeHtml(text) {
+  return String(text ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  }[char]));
+}
+
+async function showClubs() {
+  content.innerHTML = `
+    <h1>🏆 Clubs</h1>
+
+    <div class="card">
+      <h2>➕ Créer un club</h2>
+      <input id="clubName" placeholder="Nom du club">
+      <input id="clubDescription" placeholder="Description du club">
+      <button onclick="createClub()">Créer mon club</button>
+    </div>
+
+    <div id="clubsList">
+      <p>Chargement des clubs...</p>
+    </div>
+  `;
+
+  try {
+    const clubs = await api("/api/clubs");
+    const list = document.getElementById("clubsList");
+
+    if (!clubs.length) {
+      list.innerHTML = "<p>Aucun club pour le moment. Crée le premier ! 🏆</p>";
+      return;
+    }
+
+    list.innerHTML = "";
+
+    clubs.forEach(club => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <h2>${escapeHtml(club.name)}</h2>
+        <p>${escapeHtml(club.description)}</p>
+        <p>👍 ${club.likes || 0} likes · 🔔 ${club.subscribers || 0} abonnés · 💬 ${club.comments || 0} commentaires</p>
+        <button onclick="openClub(${club.id})">Ouvrir le club</button>
+      `;
+
+      list.appendChild(card);
+    });
+  } catch (error) {
+    content.innerHTML += `<p>${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function createClub() {
+  const name = document.getElementById("clubName").value.trim();
+  const description = document.getElementById("clubDescription").value.trim();
+
+  if (!name || !description) {
+    alert("Entre un nom et une description.");
+    return;
+  }
+
+  try {
+    await api("/api/clubs", {
+      method: "POST",
+      body: JSON.stringify({ name, description })
+    });
+
+    await showClubs();
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function showRanking() {
+  content.innerHTML = `
+    <h1>🥇 Classement des clubs</h1>
+    <div id="rankingList">
+      <p>Chargement du classement...</p>
+    </div>
+  `;
+
+  try {
+    const clubs = await api("/api/clubs/ranking");
+    const list = document.getElementById("rankingList");
+
+    if (!clubs.length) {
+      list.innerHTML = "<p>Aucun club à classer pour le moment.</p>";
+      return;
+    }
+
+    list.innerHTML = "";
+
+    clubs.forEach((club, index) => {
+      const card = document.createElement("div");
+      card.className = "card";
+
+      card.innerHTML = `
+        <h2>#${index + 1} 🏆 ${escapeHtml(club.name)}</h2>
+        <p>${escapeHtml(club.description)}</p>
+        <p>👍 ${club.likes || 0} · 🔔 ${club.subscribers || 0} · 💬 ${club.comments || 0}</p>
+      `;
+
+      list.appendChild(card);
+    });
+  } catch (error) {
+    content.innerHTML += `<p>${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function openClub(id) {
+  content.innerHTML = `
+    <h1>🏆 Club</h1>
+    <p>Chargement du club...</p>
+  `;
+
+  try {
+    const club = await api(`/api/clubs/${id}`);
+
+    content.innerHTML = `
+      <h1>🏆 ${escapeHtml(club.name)}</h1>
+      <p>${escapeHtml(club.description)}</p>
+
+      <div class="card">
+        <p>👍 ${club.likes || 0} likes · 🔔 ${club.subscribers || 0} abonnés</p>
+        <button onclick="likeClub(${club.id})">👍 Like</button>
+        <button onclick="subscribeClub(${club.id})">🔔 S'abonner</button>
+      </div>
+
+      <div class="card">
+        <h2>💬 Discussion du club</h2>
+        <div id="clubMessages" class="chat"></div>
+
+        <div class="row">
+          <input id="clubMessageInput" placeholder="Écrire un message...">
+          <button onclick="sendClubMessage(${club.id})">Envoyer</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>💬 Commentaires</h2>
+        <div id="clubComments"></div>
+
+        <div class="row">
+          <input id="clubCommentInput" placeholder="Ajouter un commentaire...">
+          <button onclick="addClubComment(${club.id})">Commenter</button>
+        </div>
+      </div>
+    `;
+
+    await loadClubMessages(id);
+    await loadClubComments(id);
+  } catch (error) {
+    content.innerHTML = `<h1>🏆 Club</h1><p>${escapeHtml(error.message)}</p>`;
+  }
+}
+
+async function likeClub(id) {
+  try {
+    await api(`/api/clubs/${id}/like`, { method: "POST" });
+    await openClub(id);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function subscribeClub(id) {
+  try {
+    await api(`/api/clubs/${id}/subscribe`, { method: "POST" });
+    await openClub(id);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function loadClubMessages(id) {
+  const messages = await api(`/api/clubs/${id}/messages`);
+  const box = document.getElementById("clubMessages");
+
+  box.innerHTML = "";
+
+  messages.forEach(message => {
+    const div = document.createElement("div");
+    div.className = "message";
+
+    div.innerHTML = `
+      <strong>${escapeHtml(message.username)}</strong>
+      ${escapeHtml(message.content)}
+    `;
+
+    box.appendChild(div);
+  });
+
+  box.scrollTop = box.scrollHeight;
+}
+
+async function sendClubMessage(id) {
+  const input = document.getElementById("clubMessageInput");
+  const content = input.value.trim();
+
+  if (!content) return;
+
+  try {
+    await api(`/api/clubs/${id}/messages`, {
+      method: "POST",
+      body: JSON.stringify({ content })
+    });
+
+    input.value = "";
+    await loadClubMessages(id);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
+async function loadClubComments(id) {
+  const comments = await api(`/api/clubs/${id}/comments`);
+  const box = document.getElementById("clubComments");
+
+  box.innerHTML = "";
+
+  comments.forEach(comment => {
+    const div = document.createElement("div");
+    div.className = "message";
+
+    div.innerHTML = `
+      <strong>${escapeHtml(comment.username)}</strong>
+      ${escapeHtml(comment.content)}
+    `;
+
+    box.appendChild(div);
+  });
+}
+
+async function addClubComment(id) {
+  const input = document.getElementById("clubCommentInput");
+  const content = input.value.trim();
+
+  if (!content) return;
+
+  try {
+    await api(`/api/clubs/${id}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ content })
+    });
+
+    input.value = "";
+    await loadClubComments(id);
+  } catch (error) {
+    alert(error.message);
+  }
+}
+
 
 if (token && me) {
   startApp();

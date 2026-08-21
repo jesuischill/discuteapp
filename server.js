@@ -15,6 +15,9 @@ const JWT_SECRET = process.env.JWT_SECRET || "CHANGE_MOI_PAR_UN_VRAI_SECRET";
 
 const db = new Database("discuteapp.db");
 
+// Utilisateurs actuellement connectés
+const onlineUsers = new Map();
+
 db.exec(`
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -232,8 +235,234 @@ app.get("/api/users", auth, (req, res) => {
     ORDER BY username
   `).all(req.user.id);
 
-  res.json(users);
+  const usersWithStatus = users.map(user => ({
+    ...user,
+    online: onlineUsers.has(user.id)
+  }));
+
+  res.json(usersWithStatus);
 });
+
+
+/* CLUBS */
+
+app.get("/api/clubs", auth, (req, res) => {
+  const clubs = db.prepare(`
+    SELECT
+      c.id,
+      c.name,
+      c.description,
+      c.creator_id,
+      c.created_at,
+      (SELECT COUNT(*) FROM club_likes WHERE club_id = c.id) AS likes,
+      (SELECT COUNT(*) FROM club_subscriptions WHERE club_id = c.id) AS subscribers,
+      (SELECT COUNT(*) FROM club_comments WHERE club_id = c.id) AS comments
+    FROM clubs c
+    ORDER BY c.created_at DESC
+  `).all();
+
+  res.json(clubs);
+});
+
+app.post("/api/clubs", auth, (req, res) => {
+  const name = String(req.body.name || "").trim();
+  const description = String(req.body.description || "").trim();
+
+  if (!name || !description) {
+    return res.status(400).json({
+      error: "Le nom et la description sont obligatoires."
+    });
+  }
+
+  try {
+    const result = db.prepare(`
+      INSERT INTO clubs (name, description, creator_id)
+      VALUES (?, ?, ?)
+    `).run(name, description, req.user.id);
+
+    const club = db.prepare(`
+      SELECT id, name, description, creator_id, created_at
+      FROM clubs
+      WHERE id = ?
+    `).get(result.lastInsertRowid);
+
+    res.status(201).json(club);
+  } catch (error) {
+    if (String(error.message).includes("UNIQUE")) {
+      return res.status(400).json({
+        error: "Un club avec ce nom existe déjà."
+      });
+    }
+
+    console.error(error);
+    res.status(500).json({ error: "Impossible de créer le club." });
+  }
+});
+
+app.get("/api/clubs/ranking", auth, (req, res) => {
+  const clubs = db.prepare(`
+    SELECT
+      c.id,
+      c.name,
+      c.description,
+      (SELECT COUNT(*) FROM club_likes WHERE club_id = c.id) AS likes,
+      (SELECT COUNT(*) FROM club_subscriptions WHERE club_id = c.id) AS subscribers,
+      (SELECT COUNT(*) FROM club_comments WHERE club_id = c.id) AS comments
+    FROM clubs c
+    ORDER BY likes DESC, subscribers DESC, comments DESC, c.created_at ASC
+  `).all();
+
+  res.json(clubs);
+});
+
+app.get("/api/clubs/:id", auth, (req, res) => {
+  const club = db.prepare(`
+    SELECT
+      c.id,
+      c.name,
+      c.description,
+      c.creator_id,
+      c.created_at,
+      (SELECT COUNT(*) FROM club_likes WHERE club_id = c.id) AS likes,
+      (SELECT COUNT(*) FROM club_subscriptions WHERE club_id = c.id) AS subscribers
+    FROM clubs c
+    WHERE c.id = ?
+  `).get(req.params.id);
+
+  if (!club) {
+    return res.status(404).json({ error: "Club introuvable." });
+  }
+
+  res.json(club);
+});
+
+app.post("/api/clubs/:id/like", auth, (req, res) => {
+  const clubId = Number(req.params.id);
+
+  const club = db.prepare("SELECT id FROM clubs WHERE id = ?").get(clubId);
+  if (!club) {
+    return res.status(404).json({ error: "Club introuvable." });
+  }
+
+  const existing = db.prepare(`
+    SELECT id FROM club_likes
+    WHERE club_id = ? AND user_id = ?
+  `).get(clubId, req.user.id);
+
+  if (existing) {
+    db.prepare("DELETE FROM club_likes WHERE id = ?").run(existing.id);
+    return res.json({ liked: false });
+  }
+
+  db.prepare(`
+    INSERT INTO club_likes (club_id, user_id)
+    VALUES (?, ?)
+  `).run(clubId, req.user.id);
+
+  res.json({ liked: true });
+});
+
+app.post("/api/clubs/:id/subscribe", auth, (req, res) => {
+  const clubId = Number(req.params.id);
+
+  const club = db.prepare("SELECT id FROM clubs WHERE id = ?").get(clubId);
+  if (!club) {
+    return res.status(404).json({ error: "Club introuvable." });
+  }
+
+  const existing = db.prepare(`
+    SELECT id FROM club_subscriptions
+    WHERE club_id = ? AND user_id = ?
+  `).get(clubId, req.user.id);
+
+  if (existing) {
+    db.prepare("DELETE FROM club_subscriptions WHERE id = ?").run(existing.id);
+    return res.json({ subscribed: false });
+  }
+
+  db.prepare(`
+    INSERT INTO club_subscriptions (club_id, user_id)
+    VALUES (?, ?)
+  `).run(clubId, req.user.id);
+
+  res.json({ subscribed: true });
+});
+
+app.get("/api/clubs/:id/messages", auth, (req, res) => {
+  const messages = db.prepare(`
+    SELECT
+      m.id,
+      m.club_id,
+      m.user_id,
+      m.username,
+      m.content,
+      m.created_at
+    FROM club_messages m
+    WHERE m.club_id = ?
+    ORDER BY m.id ASC
+  `).all(req.params.id);
+
+  res.json(messages);
+});
+
+app.post("/api/clubs/:id/messages", auth, (req, res) => {
+  const clubId = Number(req.params.id);
+  const message = String(req.body.content || "").trim();
+
+  if (!message) {
+    return res.status(400).json({ error: "Le message est vide." });
+  }
+
+  const club = db.prepare("SELECT id FROM clubs WHERE id = ?").get(clubId);
+  if (!club) {
+    return res.status(404).json({ error: "Club introuvable." });
+  }
+
+  db.prepare(`
+    INSERT INTO club_messages (club_id, user_id, username, content)
+    VALUES (?, ?, ?, ?)
+  `).run(clubId, req.user.id, req.user.username, message);
+
+  res.json({ success: true });
+});
+
+app.get("/api/clubs/:id/comments", auth, (req, res) => {
+  const comments = db.prepare(`
+    SELECT
+      c.id,
+      c.content,
+      c.created_at,
+      u.username
+    FROM club_comments c
+    JOIN users u ON u.id = c.user_id
+    WHERE c.club_id = ?
+    ORDER BY c.id DESC
+  `).all(req.params.id);
+
+  res.json(comments);
+});
+
+app.post("/api/clubs/:id/comments", auth, (req, res) => {
+  const clubId = Number(req.params.id);
+  const content = String(req.body.content || "").trim();
+
+  if (!content) {
+    return res.status(400).json({ error: "Le commentaire est vide." });
+  }
+
+  const club = db.prepare("SELECT id FROM clubs WHERE id = ?").get(clubId);
+  if (!club) {
+    return res.status(404).json({ error: "Club introuvable." });
+  }
+
+  db.prepare(`
+    INSERT INTO club_comments (club_id, user_id, content)
+    VALUES (?, ?, ?)
+  `).run(clubId, req.user.id, content);
+
+  res.status(201).json({ success: true });
+});
+
 
 /* CHAT PUBLIC */
 app.get("/api/public-messages", auth, (req, res) => {
@@ -674,6 +903,30 @@ io.use((socket, next) => {
 
 io.on("connection", socket => {
   socket.join(`user-${socket.user.id}`);
+
+  // Marquer l'utilisateur comme connecté
+  const userId = socket.user.id;
+  onlineUsers.set(userId, (onlineUsers.get(userId) || 0) + 1);
+
+  // Prévenir tous les clients
+  io.emit("user_status_changed", {
+    userId,
+    online: true
+  });
+
+  socket.on("disconnect", () => {
+    const count = (onlineUsers.get(userId) || 1) - 1;
+
+    if (count <= 0) {
+      onlineUsers.delete(userId);
+      io.emit("user_status_changed", {
+        userId,
+        online: false
+      });
+    } else {
+      onlineUsers.set(userId, count);
+    }
+  });
 
   socket.on("public_message", rawContent => {
     const freshUser = getDbUser(socket.user.id);
