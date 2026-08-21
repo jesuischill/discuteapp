@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎮 Jeux - DiscuteApp</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, #174ea6 0%, transparent 45%),
+        linear-gradient(135deg, #020617, #0b2a5b, #061a3a);
+      background-attachment: fixed;
+      color: white;
+      max-width: 900px;
+      margin: 30px auto;
+      padding: 20px;
+    }
+
+    .game {
+      position: relative;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 20px;
+      margin: 15px 0;
+      overflow: hidden;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px;
+    }
+
+    .result {
+      font-weight: bold;
+      min-height: 20px;
+    }
+
+    .locked-game {
+      user-select: none;
+    }
+
+    .lock-overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.72);
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .lock-overlay::before,
+    .lock-overlay::after {
+      content: "⛓️ ⛓️ ⛓️ ⛓️ ⛓️";
+      position: absolute;
+      font-size: 38px;
+      white-space: nowrap;
+    }
+
+    .lock-overlay::before {
+      transform: rotate(25deg) scale(1.4);
+    }
+
+    .lock-overlay::after {
+      transform: rotate(-25deg) scale(1.4);
+    }
+
+    .lock-box {
+      position: relative;
+      z-index: 11;
+      text-align: center;
+      padding: 15px;
+    }
+
+    .lock-icon {
+      font-size: 70px;
+      display: block;
+    }
+
+    .lock-text {
+      font-size: 20px;
+      font-weight: bold;
+      margin: 8px 0;
+    }
+  </style>
+</head>
+
+<body>
+
+  <h1>🎮 Jeux DiscuteApp</h1>
+  <p id="gemsBalance">💎 Chargement...</p>
+  <p>Gagne des gemmes en réussissant les défis !</p>
+
+  <div class="game" id="game1">
+    <h2>🎮 Facile</h2>
+    <p>Trouve le nombre entre 1 et 10.</p>
+    <p>🏆 Récompense : +10 💎</p>
+
+    <input id="guess1" type="number" min="1" max="10" placeholder="Ton nombre">
+    <button onclick="checkGuess(1)">Essayer</button>
+
+    <p class="result" id="result1"></p>
+    <p>Essais : <span id="attempts1">0</span></p>
+  </div>
+
+  <div class="game locked-game" id="game2">
+    <h2>🎯 Moyen</h2>
+    <p>Trouve le nombre entre 1 et 100.</p>
+    <p>🔓 Prix : 100 💎</p>
+    <p>🏆 Récompense : +500 💎</p>
+
+    <input id="guess2" type="number" min="1" max="100" placeholder="Ton nombre" disabled>
+    <button id="play2" onclick="checkGuess(2)" disabled>Jouer</button>
+    <p class="result" id="result2"></p>
+    <p>Essais : <span id="attempts2">0</span></p>
+
+    <div class="lock-overlay" id="lock2">
+      <div class="lock-box">
+        <span class="lock-icon">🔒</span>
+        <div class="lock-text">100 💎 pour débloquer</div>
+        <button onclick="unlockGame(2)">💳 Payer 100 💎</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="game locked-game" id="game3">
+    <h2>🔥 Difficile</h2>
+    <p>Trouve le nombre entre 1 et 1 000.</p>
+    <p>🔓 Prix : 5 000 💎</p>
+    <p>🏆 Récompense : +1 000 💎</p>
+
+    <input id="guess3" type="number" min="1" max="1000" placeholder="Ton nombre" disabled>
+    <button id="play3" onclick="checkGuess(3)" disabled>Jouer</button>
+    <p class="result" id="result3"></p>
+    <p>Essais : <span id="attempts3">0</span></p>
+
+    <div class="lock-overlay" id="lock3">
+      <div class="lock-box">
+        <span class="lock-icon">🔒</span>
+        <div class="lock-text">5 000 💎 pour débloquer</div>
+        <button onclick="unlockGame(3)">💳 Payer 5 000 💎</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="game locked-game" id="game4">
+    <h2>⚡ Très difficile</h2>
+    <p>Trouve le nombre entre 1 et 10 000.</p>
+    <p>🔓 Prix : 500 000 💎</p>
+    <p>🏆 Récompense : +10 000 💎</p>
+
+    <input id="guess4" type="number" min="1" max="10000" placeholder="Ton nombre" disabled>
+    <button id="play4" onclick="checkGuess(4)" disabled>Jouer</button>
+    <p class="result" id="result4"></p>
+    <p>Essais : <span id="attempts4">0</span></p>
+
+    <div class="lock-overlay" id="lock4">
+      <div class="lock-box">
+        <span class="lock-icon">🔒</span>
+        <div class="lock-text">500 000 💎 pour débloquer</div>
+        <button onclick="unlockGame(4)">💳 Payer 500 000 💎</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="game locked-game" id="game5">
+    <h2>👑 Extrême</h2>
+    <p>Trouve le nombre entre 1 et 100 000.</p>
+    <p>🔓 Prix : 1 000 000 💎</p>
+    <p>🏆 Récompense : +50 000 💎</p>
+
+    <input id="guess5" type="number" min="1" max="100000" placeholder="Ton nombre" disabled>
+    <button id="play5" onclick="checkGuess(5)" disabled>Jouer</button>
+    <p class="result" id="result5"></p>
+    <p>Essais : <span id="attempts5">0</span></p>
+
+    <div class="lock-overlay" id="lock5">
+      <div class="lock-box">
+        <span class="lock-icon">🔒</span>
+        <div class="lock-text">1 000 000 💎 pour débloquer</div>
+        <button onclick="unlockGame(5)">💳 Payer 1 000 000 💎</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const games = {
+      1: { max: 10, reward: 10 },
+      2: { max: 100, reward: 500 },
+      3: { max: 1000, reward: 1000 },
+      4: { max: 10000, reward: 10000 },
+      5: { max: 100000, reward: 50000 }
+    };
+
+    const secrets = {};
+    const attempts = {};
+    const rewarded = {};
+
+    for (const id in games) {
+      secrets[id] = Math.floor(Math.random() * games[id].max) + 1;
+      attempts[id] = 0;
+      rewarded[id] = false;
+    }
+
+    const token = localStorage.getItem("discuteapp_token");
+
+    async function api(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+          ...(options.headers || {})
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Une erreur est survenue.");
+      }
+
+      return data;
+    }
+
+    async function loadGems() {
+      try {
+        const data = await api("/api/my-gems");
+        document.getElementById("gemsBalance").textContent =
+          `💎 Ton solde : ${data.gems || 0} gemmes`;
+      } catch (error) {
+        document.getElementById("gemsBalance").textContent =
+          "❌ Impossible de charger tes gemmes.";
+      }
+    }
+
+    async function loadUnlockedGames() {
+      try {
+        const data = await api("/api/games/unlocked");
+
+        data.unlocked.forEach(gameId => {
+          unlockVisually(gameId);
+        });
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function unlockVisually(gameId) {
+      if (gameId === 1) return;
+
+      const lock = document.getElementById(`lock${gameId}`);
+      const input = document.getElementById(`guess${gameId}`);
+      const button = document.getElementById(`play${gameId}`);
+
+      if (lock) lock.remove();
+      if (input) input.disabled = false;
+      if (button) button.disabled = false;
+    }
+
+    async function unlockGame(gameId) {
+      try {
+        const data = await api("/api/games/unlock", {
+          method: "POST",
+          body: JSON.stringify({ gameId })
+        });
+
+        unlockVisually(gameId);
+
+        document.getElementById("gemsBalance").textContent =
+          `💎 Ton solde : ${data.gems} gemmes`;
+
+        alert(data.message);
+      } catch (error) {
+        alert(error.message);
+      }
+    }
+
+    async function checkGuess(gameId) {
+      const game = games[gameId];
+      const input = document.getElementById(`guess${gameId}`);
+      const result = document.getElementById(`result${gameId}`);
+      const guess = Number(input.value);
+
+      if (!Number.isInteger(guess) || guess < 1 || guess > game.max) {
+        result.textContent =
+          `⚠️ Entre un nombre entre 1 et ${game.max}.`;
+        return;
+      }
+
+      attempts[gameId]++;
+      document.getElementById(`attempts${gameId}`).textContent =
+        attempts[gameId];
+
+      if (guess < secrets[gameId]) {
+        result.textContent = "⬆️ Trop petit !";
+      } else if (guess > secrets[gameId]) {
+        result.textContent = "⬇️ Trop grand !";
+      } else {
+        if (rewarded[gameId]) {
+          result.textContent = "🎉 Tu as déjà gagné cette récompense.";
+          return;
+        }
+
+        rewarded[gameId] = true;
+
+        try {
+          const data = await api("/api/games/reward", {
+            method: "POST",
+            body: JSON.stringify({ gameId })
+          });
+
+          result.textContent =
+            `🎉 Bravo ! Tu as gagné ${game.reward} 💎 !`;
+
+          document.getElementById("gemsBalance").textContent =
+            `💎 Ton solde : ${data.gems} gemmes`;
+
+          secrets[gameId] =
+            Math.floor(Math.random() * game.max) + 1;
+        } catch (error) {
+          rewarded[gameId] = false;
+          result.textContent = `❌ ${error.message}`;
+        }
+      }
+
+      input.value = "";
+      input.focus();
+    }
+
+    loadGems();
+    loadUnlockedGames();
+  </script>
+
+</body>
+</html>
