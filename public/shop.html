@@ -123,6 +123,60 @@
         linear-gradient(135deg, #eaf9ff, #d2f1ff, #eefaff);
     }
 
+  
+    /* ===== CITROUILLE HALLOWEEN ANIMÉE ===== */
+    .halloween-pumpkin {
+      width: 110px;
+      height: 85px;
+      margin: 15px auto;
+      background: #ff7b00;
+      border-radius: 48% 48% 42% 42%;
+      position: relative;
+      border: 4px solid #b84d00;
+      box-shadow: inset -12px 0 0 rgba(0,0,0,.12);
+    }
+
+    .halloween-pumpkin::before {
+      content: "🌿";
+      position: absolute;
+      top: -27px;
+      left: 40px;
+      font-size: 30px;
+    }
+
+    .pumpkin-eyes {
+      position: absolute;
+      top: 22px;
+      width: 100%;
+      text-align: center;
+      font-size: 20px;
+      color: #1a1025;
+      letter-spacing: 10px;
+    }
+
+    .pumpkin-mouth {
+      position: absolute;
+      left: 28px;
+      bottom: 15px;
+      width: 50px;
+      height: 8px;
+      background: #1a1025;
+      border-radius: 0 0 50% 50%;
+      animation: pumpkinMouth 0.8s ease-in-out infinite alternate;
+      transform-origin: center top;
+    }
+
+    @keyframes pumpkinMouth {
+      from {
+        height: 8px;
+        border-radius: 0 0 50% 50%;
+      }
+      to {
+        height: 28px;
+        border-radius: 0 0 45% 45%;
+      }
+    }
+
   </style>
 </head>
 
@@ -187,6 +241,41 @@
 
 
   <section class="shop-section">
+    
+    <div class="card" style="
+      border: 3px solid #d4af37;
+      box-shadow: 0 0 18px rgba(212,175,55,.8);
+      background: linear-gradient(135deg, #fff8e1, #ffe0e0);
+    ">
+      <h3>🎅 Christmas</h3>
+
+      <p style="font-size: 18px; font-weight: bold;">
+        🍬 Titre exclusif couleur sucre d'orge
+      </p>
+
+      <p style="
+        display: inline-block;
+        background: #d4af37;
+        color: white;
+        padding: 7px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+      ">
+        ⭐ CERTIFIÉ EXCLUSIF ⭐
+      </p>
+
+      <p>
+        🎄 Un titre spécial avec un chapeau de Noël et une certification
+        exclusive visible directement dans le chat.
+      </p>
+
+      <p class="price">💎 50 000 gemmes</p>
+
+      <button onclick="buyItem('title_christmas')">
+        🎁 Acheter l'exclusif
+      </button>
+    </div>
+
     <h2>🖼️ Images à côté du pseudo</h2>
 
     <div class="items">
@@ -272,6 +361,38 @@
 
 
   <section class="shop-section">
+    
+    <div class="card" style="
+      border: 3px solid #ff7b00;
+      box-shadow: 0 0 20px rgba(255,123,0,.8);
+      background: linear-gradient(135deg, #1a1025, #3b1d0a);
+      color: white;
+    ">
+      <h3>🎃 Halloween</h3>
+
+      <div class="halloween-pumpkin">
+        <div class="pumpkin-eyes">▲ ▲</div>
+        <div class="pumpkin-mouth"></div>
+      </div>
+
+      <p>👻 Image exclusive Halloween animée</p>
+
+      <p style="
+        display:inline-block;
+        background:#d4af37;
+        color:white;
+        padding:7px 12px;
+        border-radius:20px;
+        font-weight:bold;
+      ">⭐ CERTIFIÉ EXCLUSIF</p>
+
+      <p class="price">💎 50 000 gemmes</p>
+
+      <button onclick="buyItem('image_halloween')">
+        🎁 Acheter l'exclusif
+      </button>
+    </div>
+
     <h2>🎨 Couleur de ton texte</h2>
     <p style="text-align:center;">
       Achète une couleur pour personnaliser tes messages dans le chat.
@@ -358,6 +479,31 @@
         <p class="price">💎 50 000 gemmes</p>
         <button onclick="buyItem('color_gold')">Acheter</button>
       </div>
+
+
+      <div class="item gold-wave-exclusive">
+        <div class="exclusive-frame">
+          <div class="exclusive-label">⭐ CERTIFIÉ EXCLUSIF ⭐</div>
+
+          <div class="gold-wave-preview">
+            ✨ Bonjour, je discute ! ✨
+          </div>
+
+          <h3>✨ Or brillant ondulant</h3>
+
+          <p>
+            Une couleur dorée brillante avec un effet lumineux
+            qui bouge continuellement en ondulation.
+          </p>
+
+          <p class="price">💎 70 000 gemmes</p>
+
+          <button onclick="buyItem('color_gold_wave')">
+            💎 Acheter l'exclusif
+          </button>
+        </div>
+      </div>
+
 
     </div>
   </section>
@@ -533,8 +679,87 @@
     }
 
 
+    async function loadDiscounts() {
+      try {
+        const response = await fetch("/api/shop/items", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          },
+          cache: "no-store"
+        });
+
+        const items = await response.json();
+
+        if (!response.ok) {
+          throw new Error(items.error || "Erreur");
+        }
+
+        items.forEach(item => {
+          const button = document.querySelector(
+            `[onclick="buyItem('${item.id}')"]`
+          );
+
+          if (!button) return;
+
+          const card = button.closest(".item");
+          if (!card) return;
+
+          const price = card.querySelector(".price");
+          if (!price) return;
+
+          const discount = Number(item.discount || 0);
+
+          // Toujours repartir du prix normal affiché par le serveur
+          if (discount <= 0) {
+            price.innerHTML =
+              `💎 ${Number(item.price).toLocaleString("fr-FR")} gemmes`;
+            return;
+          }
+
+          // Calcul du nouveau prix directement ici
+          const oldPrice = Number(item.price);
+          const newPrice = Math.round(
+            oldPrice * (100 - discount) / 100
+          );
+
+          price.innerHTML = `
+            <span style="text-decoration:line-through; opacity:0.65;">
+              💎 ${oldPrice.toLocaleString("fr-FR")}
+            </span>
+            <br>
+            <strong style="font-size:18px;">
+              💎 ${newPrice.toLocaleString("fr-FR")} gemmes
+            </strong>
+            <br>
+            <span style="
+              display:inline-block;
+              margin-top:6px;
+              padding:4px 8px;
+              border-radius:8px;
+              font-weight:bold;
+              background:#ffcc00;
+            ">
+              🔥 -${discount} % SOLDES
+            </span>
+          `;
+        });
+
+      } catch (error) {
+        console.error("Impossible de charger les soldes :", error);
+      }
+    }
+
     loadGems();
+    loadDiscounts();
+
+    setInterval(() => {
+      loadGems();
+      loadDiscounts();
+    }, 2000);
+    loadDiscounts();
+    loadDiscounts();
   </script>
+
 
 </body>
 </html>
