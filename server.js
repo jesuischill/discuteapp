@@ -262,6 +262,57 @@ db.exec(`
   )
 `);
 
+/* SOLDES GLOBALES DE LA BOUTIQUE */
+db.exec(`
+  CREATE TABLE IF NOT EXISTS shop_settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  )
+`);
+
+db.prepare(`
+  INSERT OR IGNORE INTO shop_settings (key, value)
+  VALUES ('discount_percent', '0')
+`).run();
+
+function getShopDiscount() {
+  const row = db.prepare(`
+    SELECT value FROM shop_settings
+    WHERE key = 'discount_percent'
+  `).get();
+
+  const discount = Number(row?.value || 0);
+  return Math.max(0, Math.min(100, discount));
+}
+
+function getDiscountedPrice(price) {
+  const discount = getShopDiscount();
+  return Math.max(0, Math.round(price * (100 - discount) / 100));
+}
+
+/* SOLDES PAR ARTICLE */
+db.exec(`
+  CREATE TABLE IF NOT EXISTS shop_item_discounts (
+    item_id TEXT PRIMARY KEY,
+    discount_percent INTEGER NOT NULL DEFAULT 0
+  )
+`);
+
+function getItemDiscount(itemId) {
+  const row = db.prepare(`
+    SELECT discount_percent
+    FROM shop_item_discounts
+    WHERE item_id = ?
+  `).get(itemId);
+
+  return Math.max(0, Math.min(100, Number(row?.discount_percent || 0)));
+}
+
+function getDiscountedItemPrice(itemId, price) {
+  const discount = getItemDiscount(itemId);
+  return Math.max(0, Math.round(price * (100 - discount) / 100));
+}
+
 const SHOP_ITEMS = {
   title_bg:       { price: 5000,     type: "title", name: "BG" },
   title_chill:    { price: 1000,     type: "title", name: "Chill" },
@@ -290,6 +341,36 @@ const SHOP_ITEMS = {
   admin_panel:    { price: 10000000, type: "admin_panel", name: "Panneau Admin" }
 };
 
+
+/* TITRE EXCLUSIF CHRISTMAS */
+if (!SHOP_ITEMS.title_christmas) {
+  SHOP_ITEMS.title_christmas = {
+    type: "title",
+    name: "🎅 Christmas ⭐ Certifié exclusif",
+    price: 50000
+  };
+}
+
+
+/* IMAGE EXCLUSIVE HALLOWEEN */
+if (!SHOP_ITEMS.image_halloween) {
+  SHOP_ITEMS.image_halloween = {
+    type: "image",
+    name: "🎃 Halloween ⭐ Certifié exclusif",
+    price: 50000
+  };
+}
+
+
+/* COULEUR EXCLUSIVE OR BRILLANT ONDULANT */
+if (!SHOP_ITEMS.color_gold_wave) {
+  SHOP_ITEMS.color_gold_wave = {
+    type: "color",
+    name: "✨ Or brillant ondulant ⭐ Certifié exclusif",
+    price: 70000
+  };
+}
+
 app.post("/api/shop/buy", auth, (req, res) => {
   const { itemId, data = {} } = req.body || {};
   const item = SHOP_ITEMS[itemId];
@@ -314,7 +395,9 @@ app.post("/api/shop/buy", auth, (req, res) => {
 
     if (!user) throw new Error("Utilisateur introuvable.");
 
-    if ((user.gems || 0) < item.price) {
+    const finalPrice = getDiscountedPrice(item.price);
+
+    if ((user.gems || 0) < finalPrice) {
       throw new Error("Tu n'as pas assez de gemmes.");
     }
 
@@ -322,7 +405,7 @@ app.post("/api/shop/buy", auth, (req, res) => {
       UPDATE users
       SET gems = gems - ?
       WHERE id = ?
-    `).run(item.price, user.id);
+    `).run(finalPrice, user.id);
 
     db.prepare(`
       INSERT INTO purchases
@@ -334,7 +417,7 @@ app.post("/api/shop/buy", auth, (req, res) => {
       item.type,
       item.name,
       JSON.stringify(data),
-      item.price
+      finalPrice
     );
 
     return db.prepare(`
@@ -355,6 +438,99 @@ app.post("/api/shop/buy", auth, (req, res) => {
 });
 
 
+
+/* SOLDES DE LA BOUTIQUE */
+app.get("/api/shop/discount", auth, (req, res) => {
+  res.json({
+    discount: getShopDiscount()
+  });
+});
+
+/* PANNEAU SOLDES : RÉSERVÉ UNIQUEMENT AU PROPRIÉTAIRE */
+app.post("/api/admin/shop/discount", auth, (req, res) => {
+  if (req.user.username !== "chilladmin") {
+    return res.status(403).json({
+      error: "Ce panneau est réservé au propriétaire."
+    });
+  }
+
+  const discount = Number(req.body?.discount);
+
+  if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
+    return res.status(400).json({
+      error: "Le pourcentage doit être entre 0 et 100."
+    });
+  }
+
+  db.prepare(`
+    UPDATE shop_settings
+    SET value = ?
+    WHERE key = 'discount_percent'
+  `).run(String(Math.round(discount)));
+
+  res.json({
+    message: Math.round(discount) === 0
+      ? "Soldes retirées."
+      : `Soldes de ${Math.round(discount)} % activées !`,
+    discount: Math.round(discount)
+  });
+});
+
+/* LISTE DES ARTICLES ET SOLDES */
+app.get("/api/shop/items", auth, (req, res) => {
+  const items = Object.entries(SHOP_ITEMS).map(([id, item]) => {
+    const discount = getItemDiscount(id);
+
+    return {
+      id,
+      name: item.name,
+      price: item.price,
+      discount,
+      finalPrice: getDiscountedItemPrice(id, item.price)
+    };
+  });
+
+  res.json(items);
+});
+
+/* SOLDES PAR ARTICLE — PROPRIÉTAIRE UNIQUEMENT */
+app.post("/api/admin/shop/item-discount", auth, (req, res) => {
+  if (req.user.username !== "chilladmin") {
+    return res.status(403).json({
+      error: "Réservé au propriétaire."
+    });
+  }
+
+  const itemId = String(req.body?.itemId || "");
+  const discount = Math.round(Number(req.body?.discount));
+
+  if (!SHOP_ITEMS[itemId]) {
+    return res.status(400).json({
+      error: "Article invalide."
+    });
+  }
+
+  if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
+    return res.status(400).json({
+      error: "La solde doit être entre 0 et 100 %."
+    });
+  }
+
+  db.prepare(`
+    INSERT INTO shop_item_discounts (item_id, discount_percent)
+    VALUES (?, ?)
+    ON CONFLICT(item_id)
+    DO UPDATE SET discount_percent = excluded.discount_percent
+  `).run(itemId, discount);
+
+  res.json({
+    message: discount === 0
+      ? `Solde retirée pour ${SHOP_ITEMS[itemId].name}.`
+      : `Solde de ${discount} % appliquée à ${SHOP_ITEMS[itemId].name}.`,
+    itemId,
+    discount
+  });
+});
 
 /* CLASSEMENT : utilisateurs avec le plus de gemmes */
 app.get("/api/rankings/gems", auth, (req, res) => {
@@ -462,6 +638,17 @@ app.get("/api/my-gems", auth, (req, res) => {
 
 
 /* JEUX ET GEMMES */
+
+
+/* Sauvegarde l'apparence des accessoires avec chaque message */
+try {
+  db.prepare("ALTER TABLE public_messages ADD COLUMN accessories TEXT").run();
+  console.log("Colonne accessories ajoutée à public_messages.");
+} catch (error) {
+  if (!String(error.message).includes("duplicate column name")) {
+    throw error;
+  }
+}
 
 const GAME_CONFIG = {
   1: { price: 0, reward: 10 },
@@ -798,7 +985,7 @@ app.post("/api/clubs/:id/comments", auth, (req, res) => {
 /* CHAT PUBLIC */
 app.get("/api/public-messages", auth, (req, res) => {
   const messages = db.prepare(`
-    SELECT id, user_id, username, content, created_at
+    SELECT id, user_id, username, content, accessories, created_at
     FROM public_messages
     ORDER BY id DESC
     LIMIT 100
@@ -1458,11 +1645,6 @@ io.on("connection", socket => {
 
     if (!content) return;
 
-    const result = db.prepare(`
-      INSERT INTO public_messages (user_id, username, content)
-      VALUES (?, ?, ?)
-    `).run(freshUser.id, freshUser.username, content);
-
     const accessories = db.prepare(`
       SELECT item_id, item_type, item_name, item_data
       FROM purchases
@@ -1486,6 +1668,17 @@ io.on("connection", socket => {
         data
       };
     }
+
+    const result = db.prepare(`
+      INSERT INTO public_messages
+      (user_id, username, content, accessories)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      freshUser.id,
+      freshUser.username,
+      content,
+      JSON.stringify(activeAccessories)
+    );
 
     io.emit("public_message", {
       id: result.lastInsertRowid,

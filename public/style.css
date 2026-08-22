@@ -176,3 +176,154 @@ aside button {
     grid-template-columns: 1fr;
   }
 }
+
+/* ===== IMAGE HALLOWEEN EXCLUSIVE DANS LE CHAT ===== */
+.chat-halloween-exclusive {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chat-pumpkin {
+  width: 38px;
+  height: 32px;
+  background: #ff7b00;
+  border: 2px solid #b84d00;
+  border-radius: 48% 48% 42% 42%;
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.chat-pumpkin::before {
+  content: "🌿";
+  position: absolute;
+  top: -16px;
+  left: 11px;
+  font-size: 16px;
+}
+
+.chat-pumpkin-eyes {
+  position: absolute;
+  top: 6px;
+  left: 0;
+  width: 100%;
+  text-align: center;
+  font-size: 9px;
+  color: #1a1025;
+  letter-spacing: 3px;
+}
+
+.chat-pumpkin-mouth {
+  position: absolute;
+  left: 9px;
+  bottom: 5px;
+  width: 17px;
+  height: 4px;
+  background: #1a1025;
+  border-radius: 0 0 50% 50%;
+  animation: chatPumpkinMouth 0.8s ease-in-out infinite alternate;
+}
+
+@keyframes chatPumpkinMouth {
+  from {
+    height: 4px;
+  }
+  to {
+    height: 13px;
+  }
+}
+
+.chat-exclusive-badge {
+  background: #d4af37;
+  color: white;
+  padding: 2px 5px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+/* ===== OR BRILLANT ONDULANT EXCLUSIF ===== */
+.gold-wave-exclusive {
+  border: 3px solid #d4af37;
+  box-shadow: 0 0 20px rgba(212, 175, 55, 0.8);
+}
+
+.gold-wave-preview,
+.gold-wave-text {
+  display: inline-block;
+  font-weight: bold;
+  background: linear-gradient(
+    110deg,
+    #8a5a00 0%,
+    #d4af37 20%,
+    #fff4a3 40%,
+    #ffffff 50%,
+    #fff4a3 60%,
+    #d4af37 80%,
+    #8a5a00 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: goldWave 2.5s ease-in-out infinite;
+}
+
+@keyframes goldWave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.exclusive-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #8a5a00, #d4af37, #fff4a3, #d4af37, #8a5a00);
+  color: white;
+  font-weight: bold;
+}
+
+/* ===== CADRE CERTIFIÉ EXCLUSIF ===== */
+.gold-wave-exclusive {
+  position: relative;
+  border: 3px solid #d4af37;
+  border-radius: 16px;
+  padding: 6px;
+  background: linear-gradient(135deg, #4a3500, #d4af37, #fff1a8, #d4af37, #4a3500);
+  background-size: 300% 300%;
+  animation: exclusiveFrame 4s linear infinite;
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.8);
+}
+
+.exclusive-frame {
+  background: rgba(20, 20, 25, 0.96);
+  border-radius: 11px;
+  padding: 18px;
+  text-align: center;
+}
+
+.exclusive-label {
+  display: inline-block;
+  margin-bottom: 10px;
+  padding: 7px 14px;
+  border: 2px solid #ffd700;
+  border-radius: 20px;
+  background: linear-gradient(90deg, #8a5a00, #d4af37, #fff4a3, #d4af37, #8a5a00);
+  background-size: 250% 100%;
+  color: #1a1200;
+  font-weight: bold;
+  animation: exclusiveLabelShine 3s linear infinite;
+}
+
+@keyframes exclusiveFrame {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+@keyframes exclusiveLabelShine {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 250% 50%; }
+}

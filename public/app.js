@@ -250,10 +250,25 @@ async function showPublic() {
     const messages = await api("/api/public-messages");
 
     for (const message of messages) {
+      let savedAccessories = {};
+
+      if (message.accessories) {
+        try {
+          savedAccessories = typeof message.accessories === "string"
+            ? JSON.parse(message.accessories)
+            : message.accessories;
+        } catch (error) {
+          console.warn("Accessoires du message invalides :", error);
+          savedAccessories = {};
+        }
+      }
+
       addMessage(
         "publicChat",
         message.username,
-        message.content
+        message.content,
+        message.created_at,
+        savedAccessories
       );
     }
   } catch (error) {
@@ -286,19 +301,32 @@ function addMessage(
   if (imageAccessory) {
     const image = document.createElement("span");
 
-    const imageMap = {
-      image_ninja: "🍥",
-      image_gojo: "👁️",
-      image_monster: "👹",
-      image_custom: "🖼️",
-      image_collection: "🎭",
-      image_royal: "👑"
-    };
+    if (imageAccessory.itemId === "image_halloween") {
+      image.className = "chat-halloween-exclusive";
+      image.innerHTML = `
+        <span class="chat-pumpkin">
+          <span class="chat-pumpkin-eyes">▲ ▲</span>
+          <span class="chat-pumpkin-mouth"></span>
+        </span>
+        <span class="chat-exclusive-badge">⭐ EXCLUSIF</span>
+      `;
 
-    image.textContent =
-      imageMap[imageAccessory.itemId] || "🖼️";
+    } else {
+      const imageMap = {
+        image_ninja: "🍥",
+        image_gojo: "👁️",
+        image_monster: "👹",
+        image_custom: "🖼️",
+        image_collection: "🎭",
+        image_royal: "👑"
+      };
 
-    image.style.fontSize = "28px";
+      image.textContent =
+        imageMap[imageAccessory.itemId] || "🖼️";
+
+      image.style.fontSize = "28px";
+    }
+
     nameRow.appendChild(image);
   }
 
@@ -321,11 +349,16 @@ function addMessage(
       color_brown: "brown",
       color_black: "black",
       color_gray: "#777",
-      color_gold: "#b8860b"
+      color_gold: "#b8860b",
+      color_gold_wave: "__gold_wave__"
     };
 
-    text.style.color =
-      colorMap[colorAccessory.itemId] || "";
+    if (colorAccessory.itemId === "color_gold_wave") {
+      text.classList.add("gold-wave-text");
+    } else {
+      text.style.color =
+        colorMap[colorAccessory.itemId] || "";
+    }
 
     if (colorAccessory.itemId === "color_gold") {
       text.style.fontWeight = "bold";
@@ -340,7 +373,38 @@ function addMessage(
     title.style.fontSize = "13px";
     title.style.marginTop = "3px";
 
-    if (titleAccessory.itemId === "title_custom") {
+    if (titleAccessory.itemId === "title_christmas") {
+      title.innerHTML = `
+        <span style="font-size:18px;">🎅</span>
+        <span style="
+          font-weight:bold;
+          background: repeating-linear-gradient(
+            45deg,
+            #d62828 0px,
+            #d62828 8px,
+            #ffffff 8px,
+            #ffffff 16px
+          );
+          -webkit-background-clip:text;
+          background-clip:text;
+          color:transparent;
+          text-shadow: 0 0 2px rgba(180,0,0,.25);
+        ">Christmas</span>
+        <span style="
+          margin-left:7px;
+          background:#d4af37;
+          color:white;
+          padding:2px 7px;
+          border-radius:10px;
+          font-size:11px;
+          font-weight:bold;
+        ">⭐ CERTIFIÉ EXCLUSIF</span>
+      `;
+      title.style.display = "flex";
+      title.style.alignItems = "center";
+      title.style.gap = "5px";
+
+    } else if (titleAccessory.itemId === "title_custom") {
       title.textContent =
         titleAccessory.data.title || "Titre personnalisé";
       title.style.color =
@@ -736,6 +800,83 @@ async function showAdmin() {
     );
 
     container.appendChild(gemsBox);
+
+    /* 🛍️ SOLDES — PROPRIÉTAIRE UNIQUEMENT */
+    if (me.role === "owner") {
+      const discountBox = document.createElement("div");
+      discountBox.className = "card";
+
+      const discountTitle = document.createElement("strong");
+      discountTitle.textContent = "🛍️ Gérer les soldes de la boutique";
+
+      const discountInfo = document.createElement("p");
+      discountInfo.textContent =
+        "Choisis un article puis une réduction de 0 % à 100 %.";
+
+      const itemSelect = document.createElement("select");
+      itemSelect.id = "discountItemSelect";
+
+      const discountInput = document.createElement("input");
+      discountInput.id = "discountPercent";
+      discountInput.type = "number";
+      discountInput.min = "0";
+      discountInput.max = "100";
+      discountInput.value = "0";
+      discountInput.placeholder = "Réduction en %";
+
+      const saveDiscountButton = document.createElement("button");
+      saveDiscountButton.textContent = "💾 Appliquer la solde";
+      saveDiscountButton.onclick = saveItemDiscount;
+
+      const discountStatus = document.createElement("p");
+      discountStatus.id = "discountStatus";
+
+      discountBox.append(
+        discountTitle,
+        discountInfo,
+        itemSelect,
+        discountInput,
+        saveDiscountButton,
+        discountStatus
+      );
+
+      container.appendChild(discountBox);
+
+      try {
+        const items = await api("/api/shop/items");
+
+        itemSelect.innerHTML =
+          '<option value="">-- Choisir un article --</option>';
+
+        items.forEach(item => {
+          const option = document.createElement("option");
+
+          option.value = item.id;
+          option.dataset.discount = item.discount || 0;
+
+          option.textContent =
+            `${item.name} — 💎 ${item.price.toLocaleString("fr-FR")}` +
+            (item.discount > 0
+              ? ` — 🔥 -${item.discount} %`
+              : " — Prix normal");
+
+          itemSelect.appendChild(option);
+        });
+
+        itemSelect.addEventListener("change", () => {
+          const option =
+            itemSelect.options[itemSelect.selectedIndex];
+
+          discountInput.value =
+            option.dataset.discount || 0;
+        });
+
+      } catch (error) {
+        discountStatus.textContent =
+          "❌ Impossible de charger les articles : " +
+          error.message;
+      }
+    }
 
 
     users.forEach(user => {
@@ -1285,6 +1426,48 @@ async function showShopAdmin() {
   `;
 }
 
+async function saveItemDiscount() {
+  const itemId = document.getElementById("discountItemSelect").value;
+  const discount = Number(
+    document.getElementById("discountPercent").value
+  );
+
+  if (!itemId) {
+    alert("❌ Choisis un article.");
+    return;
+  }
+
+  try {
+    const result = await api("/api/admin/shop/item-discount", {
+      method: "POST",
+      body: JSON.stringify({
+        itemId,
+        discount
+      })
+    });
+
+    document.getElementById("discountStatus").textContent =
+      "✅ " + result.message;
+
+    const select = document.getElementById("discountItemSelect");
+    const option = select.options[select.selectedIndex];
+
+    option.dataset.discount = discount;
+
+    const name = option.textContent.split(" — ")[0];
+    const items = await api("/api/shop/items");
+    const item = items.find(x => x.id === itemId);
+
+    if (item) {
+      option.textContent =
+        `${item.name} — 💎 ${item.price.toLocaleString("fr-FR")} — ${discount > 0 ? "🔥 -" + discount + " %" : "Prix normal"}`;
+    }
+
+  } catch (error) {
+    alert("❌ " + error.message);
+  }
+}
+
 async function shopAdminAction(action) {
   const username = document
     .getElementById("shopAdminUsername")
@@ -1309,6 +1492,70 @@ async function shopAdminAction(action) {
     });
 
     alert("✅ " + result.message);
+
+  } catch (error) {
+    alert("❌ " + error.message);
+  }
+}
+
+async function saveItemDiscount() {
+  if (!me || me.role !== "owner") {
+    alert("❌ Réservé au propriétaire.");
+    return;
+  }
+
+  const itemId =
+    document.getElementById("discountItemSelect").value;
+
+  const discount = Number(
+    document.getElementById("discountPercent").value
+  );
+
+  if (!itemId) {
+    alert("❌ Choisis un article.");
+    return;
+  }
+
+  if (!Number.isFinite(discount) ||
+      discount < 0 ||
+      discount > 100) {
+    alert("❌ Entre un pourcentage entre 0 et 100.");
+    return;
+  }
+
+  try {
+    const result = await api(
+      "/api/admin/shop/item-discount",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          itemId,
+          discount: Math.round(discount)
+        })
+      }
+    );
+
+    document.getElementById("discountStatus").textContent =
+      "✅ " + result.message;
+
+    const select =
+      document.getElementById("discountItemSelect");
+
+    const option =
+      select.options[select.selectedIndex];
+
+    option.dataset.discount = Math.round(discount);
+
+    const items = await api("/api/shop/items");
+    const item = items.find(x => x.id === itemId);
+
+    if (item) {
+      option.textContent =
+        `${item.name} — 💎 ${item.price.toLocaleString("fr-FR")}` +
+        (discount > 0
+          ? ` — 🔥 -${Math.round(discount)} %`
+          : " — Prix normal");
+    }
 
   } catch (error) {
     alert("❌ " + error.message);
