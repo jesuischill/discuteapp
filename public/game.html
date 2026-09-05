@@ -1,20 +1,441 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Jeux · DiscuteApp</title>
-  <style>
-    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Arial, sans-serif; color: white; background: linear-gradient(135deg, #020617, #0f2a5f); }
-    main { max-width: 560px; padding: 32px; text-align: center; border-radius: 18px; background: rgba(15, 23, 42, .75); }
-    a { color: #93c5fd; }
-  </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🧠 Quiz · DiscuteApp</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Arial,sans-serif;
+  color:#fff;
+  background:
+    radial-gradient(circle at top,#172554 0,#020617 55%,#000 100%);
+}
+main{
+  width:min(1050px,94%);
+  margin:0 auto;
+  padding:28px 0 50px;
+}
+.header{
+  text-align:center;
+  margin-bottom:25px;
+}
+.header h1{
+  font-size:clamp(30px,6vw,52px);
+  margin:0 0 8px;
+}
+.header p{
+  color:#cbd5e1;
+  margin:0;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  gap:15px;
+}
+.card{
+  border:1px solid rgba(148,163,184,.25);
+  border-radius:20px;
+  padding:22px;
+  background:rgba(15,23,42,.82);
+  box-shadow:0 15px 40px rgba(0,0,0,.25);
+}
+.card h2{
+  margin:0 0 8px;
+  font-size:21px;
+}
+.card p{
+  color:#94a3b8;
+  min-height:42px;
+}
+button{
+  width:100%;
+  border:0;
+  border-radius:12px;
+  padding:13px 15px;
+  font-weight:800;
+  cursor:pointer;
+  color:#fff;
+  background:#2563eb;
+  margin-top:8px;
+}
+button:hover{filter:brightness(1.12)}
+.back{
+  background:#334155;
+  margin-bottom:15px;
+}
+.hidden{display:none}
+.levels{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+}
+.level{
+  padding:20px 12px;
+  border-radius:16px;
+  text-align:center;
+  border:1px solid rgba(255,255,255,.12);
+  background:#111827;
+}
+.level strong{
+  display:block;
+  font-size:20px;
+  margin-bottom:5px;
+}
+.easy{border-color:#22c55e}
+.hard{border-color:#f59e0b}
+.impossible{border-color:#ef4444}
+.question-box{
+  max-width:760px;
+  margin:0 auto;
+}
+.progress{
+  height:9px;
+  background:#1e293b;
+  border-radius:99px;
+  overflow:hidden;
+  margin:15px 0 25px;
+}
+.progress div{
+  height:100%;
+  background:#3b82f6;
+  transition:.25s;
+}
+.answers{
+  display:grid;
+  gap:12px;
+}
+.answer{
+  text-align:left;
+  background:#1e293b;
+  border:1px solid #334155;
+}
+.answer.correct{
+  background:#166534;
+  border-color:#22c55e;
+}
+.answer.wrong{
+  background:#991b1b;
+  border-color:#ef4444;
+}
+.result{
+  text-align:center;
+  padding:35px 20px;
+}
+.result .big{
+  font-size:55px;
+  margin-bottom:10px;
+}
+.gem{
+  color:#60a5fa;
+  font-weight:900;
+}
+.small{
+  color:#94a3b8;
+  font-size:14px;
+}
+@media(max-width:650px){
+  .levels{grid-template-columns:1fr}
+}
+</style>
 </head>
+
 <body>
-  <main>
-    <h1>🎮 Jeux DiscuteApp</h1>
-    <p>Les jeux seront bientôt disponibles.</p>
-    <p><a href="/">Retour à l’accueil</a></p>
-  </main>
+<main>
+
+<section id="home">
+  <div class="header">
+    <h1>🧠 Quiz DiscuteApp</h1>
+    <p>Teste tes connaissances et gagne des 💎</p>
+  </div>
+
+  <div id="quizList" class="grid">
+    <div class="card">
+      <h2>Chargement...</h2>
+      <p>Chargement des quiz.</p>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:25px">
+    <a href="/" style="color:#93c5fd">← Retour à l'accueil</a>
+  </div>
+</section>
+
+<section id="difficulty" class="hidden">
+  <button class="back" onclick="showHome()">← Retour aux quiz</button>
+
+  <div class="header">
+    <h1 id="difficultyTitle">Choisis ton niveau</h1>
+    <p>Plus c'est difficile, plus tu gagnes de 💎</p>
+  </div>
+
+  <div class="levels">
+    <div class="level easy">
+      <strong>🟢 Facile</strong>
+      <span class="gem">+20 💎</span>
+      <button onclick="startQuiz('facile')">Jouer</button>
+    </div>
+
+    <div class="level hard">
+      <strong>🟠 Difficile</strong>
+      <span class="gem">+50 💎</span>
+      <button onclick="startQuiz('difficile')">Jouer</button>
+    </div>
+
+    <div class="level impossible">
+      <strong>🔴 Impossible</strong>
+      <span class="gem">+100 💎</span>
+      <button onclick="startQuiz('impossible')">Jouer</button>
+    </div>
+  </div>
+</section>
+
+<section id="game" class="hidden">
+  <button class="back" onclick="showDifficulty()">← Changer de difficulté</button>
+
+  <div class="question-box card">
+    <div class="small" id="quizName"></div>
+    <h2 id="question"></h2>
+
+    <div class="progress">
+      <div id="progress"></div>
+    </div>
+
+    <div class="small" id="counter"></div>
+
+    <div id="answers" class="answers"></div>
+  </div>
+</section>
+
+<section id="result" class="hidden">
+  <div class="card result">
+    <div class="big" id="resultEmoji"></div>
+    <h1 id="resultTitle"></h1>
+    <p id="resultText"></p>
+    <p id="resultReward"></p>
+
+    <button onclick="showHome()">🧠 Choisir un autre quiz</button>
+    <button class="back" onclick="showDifficulty()">🔄 Rejouer</button>
+  </div>
+</section>
+
+</main>
+
+<script>
+let quizzes = [];
+let selectedQuiz = null;
+let selectedDifficulty = null;
+let session = null;
+let currentQuestion = 0;
+let score = 0;
+let answered = false;
+
+const $ = id => document.getElementById(id);
+
+async function api(url, options = {}) {
+  const response = await fetch(url, {
+    credentials: "include",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(data.error || "Erreur serveur.");
+  }
+
+  return data;
+}
+
+async function loadQuizzes() {
+  try {
+    quizzes = await api("/api/games/quizzes");
+
+    $("quizList").innerHTML = quizzes.map(q => `
+      <div class="card">
+        <h2>${escapeHtml(q.name)}</h2>
+        <p>10 questions • 3 niveaux de difficulté</p>
+        <p>
+          🟢 20 💎 · 🟠 50 💎 · 🔴 100 💎
+        </p>
+        <button onclick="chooseQuiz('${q.id}')">
+          🧠 Choisir ce quiz
+        </button>
+      </div>
+    `).join("");
+  } catch (error) {
+    $("quizList").innerHTML = `
+      <div class="card">
+        <h2>❌ Impossible de charger les quiz</h2>
+        <p>${escapeHtml(error.message)}</p>
+      </div>
+    `;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function hideAll() {
+  $("home").classList.add("hidden");
+  $("difficulty").classList.add("hidden");
+  $("game").classList.add("hidden");
+  $("result").classList.add("hidden");
+}
+
+function showHome() {
+  hideAll();
+  $("home").classList.remove("hidden");
+}
+
+function chooseQuiz(id) {
+  selectedQuiz = quizzes.find(q => q.id === id);
+
+  if (!selectedQuiz) return;
+
+  $("difficultyTitle").textContent =
+    `${selectedQuiz.name} — Choisis ton niveau`;
+
+  hideAll();
+  $("difficulty").classList.remove("hidden");
+}
+
+function showDifficulty() {
+  if (!selectedQuiz) return;
+  hideAll();
+  $("difficulty").classList.remove("hidden");
+}
+
+async function startQuiz(difficulty) {
+  if (!selectedQuiz) return;
+
+  selectedDifficulty = difficulty;
+
+  try {
+    const data = await api("/api/games/quiz/start", {
+      method:"POST",
+      body:JSON.stringify({
+        quizId:selectedQuiz.id,
+        difficulty
+      })
+    });
+
+    session = data;
+    currentQuestion = 0;
+    score = 0;
+    answered = false;
+
+    $("quizName").textContent =
+      `${data.quiz} • ${difficulty}`;
+
+    hideAll();
+    $("game").classList.remove("hidden");
+
+    renderQuestion();
+  } catch(error) {
+    alert(error.message);
+  }
+}
+
+function renderQuestion() {
+  const q = session.questions[currentQuestion];
+
+  if (!q) return;
+
+  answered = false;
+
+  $("question").textContent = q.question;
+
+  $("counter").textContent =
+    `Question ${currentQuestion + 1} / ${session.totalQuestions}`;
+
+  $("progress").style.width =
+    `${((currentQuestion) / session.totalQuestions) * 100}%`;
+
+  $("answers").innerHTML = q.options.map((option,index) => `
+    <button class="answer" onclick="answerQuestion(${index})">
+      ${String.fromCharCode(65 + index)}. ${escapeHtml(option)}
+    </button>
+  `).join("");
+}
+
+async function answerQuestion(index) {
+  if (answered) return;
+
+  answered = true;
+
+  const buttons =
+    [...document.querySelectorAll(".answer")];
+
+  try {
+    const result = await api("/api/games/quiz/answer", {
+      method:"POST",
+      body:JSON.stringify({
+        sessionId:session.sessionId,
+        answerIndex:index
+      })
+    });
+
+    score = result.score;
+
+    buttons[index].classList.add(
+      result.correct ? "correct" : "wrong"
+    );
+
+    if (result.finished) {
+      setTimeout(() => showResult(result), 650);
+      return;
+    }
+
+    currentQuestion++;
+
+    setTimeout(() => {
+      renderQuestion();
+    }, 550);
+
+  } catch(error) {
+    alert(error.message);
+    answered = false;
+  }
+}
+
+function showResult(result) {
+  hideAll();
+  $("result").classList.remove("hidden");
+
+  if (result.won) {
+    $("resultEmoji").textContent = "🎉";
+    $("resultTitle").textContent = "Quiz réussi !";
+    $("resultText").textContent =
+      `Score : ${result.score}/${result.totalQuestions}`;
+    $("resultReward").innerHTML =
+      `Tu remportes <span class="gem">+${result.reward} 💎</span> !`;
+  } else {
+    $("resultEmoji").textContent = "😢";
+    $("resultTitle").textContent = "Pas cette fois !";
+    $("resultText").textContent =
+      `Score : ${result.score}/${result.totalQuestions}`;
+    $("resultReward").innerHTML =
+      `Il fallait répondre correctement aux 10 questions pour gagner les 💎.`;
+  }
+}
+
+loadQuizzes();
+</script>
+
 </body>
 </html>

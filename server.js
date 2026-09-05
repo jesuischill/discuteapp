@@ -54,6 +54,544 @@ function getDiscuteBotSettings() {
 
 
 
+
+// ==================== QUIZ GEMMES ====================
+
+const QUIZ_REWARDS = {
+  facile: 20,
+  difficile: 50,
+  impossible: 100
+};
+
+const QUIZ_BANKS = {
+  pays: {
+    name: "🌍 Pays du monde",
+    questions: {
+      facile: [
+        ["Quelle est la capitale de la France ?", ["Paris", "Lyon", "Marseille", "Nice"], 0],
+        ["Quel pays est connu pour sa forme de botte ?", ["Italie", "Espagne", "Grèce", "Portugal"], 0],
+        ["Sur quel continent se trouve le Maroc ?", ["Afrique", "Asie", "Europe", "Amérique"], 0],
+        ["Quelle est la capitale de l'Espagne ?", ["Madrid", "Barcelone", "Séville", "Valence"], 0],
+        ["Quel pays a pour capitale Berlin ?", ["Allemagne", "Autriche", "Belgique", "Suisse"], 0],
+        ["Quelle est la capitale du Japon ?", ["Tokyo", "Kyoto", "Osaka", "Nagoya"], 0],
+        ["Quel pays possède Lisbonne comme capitale ?", ["Portugal", "Brésil", "Espagne", "Chili"], 0],
+        ["Quelle est la capitale de l'Italie ?", ["Rome", "Milan", "Naples", "Turin"], 0],
+        ["Quel pays est le plus vaste du monde ?", ["Russie", "Canada", "Chine", "États-Unis"], 0],
+        ["Quelle est la capitale du Royaume-Uni ?", ["Londres", "Manchester", "Liverpool", "Birmingham"], 0]
+      ],
+      difficile: [
+        ["Quelle est la capitale du Kazakhstan ?", ["Astana", "Almaty", "Bichkek", "Tachkent"], 0],
+        ["Quel pays possède la capitale Ljubljana ?", ["Slovénie", "Slovaquie", "Croatie", "Serbie"], 0],
+        ["Quelle est la capitale de la Mongolie ?", ["Oulan-Bator", "Astana", "Pékin", "Almaty"], 0],
+        ["Quel pays a pour capitale Paramaribo ?", ["Suriname", "Guyana", "Paraguay", "Uruguay"], 0],
+        ["Quelle est la capitale de la Namibie ?", ["Windhoek", "Gaborone", "Lusaka", "Maputo"], 0],
+        ["Quel pays possède la capitale Tbilissi ?", ["Géorgie", "Arménie", "Azerbaïdjan", "Moldavie"], 0],
+        ["Quelle est la capitale de la Macédoine du Nord ?", ["Skopje", "Sofia", "Pristina", "Tirana"], 0],
+        ["Quel pays a pour capitale Antananarivo ?", ["Madagascar", "Maurice", "Seychelles", "Comores"], 0],
+        ["Quelle est la capitale du Bhoutan ?", ["Thimphou", "Katmandou", "Dacca", "Colombo"], 0],
+        ["Quel pays possède la capitale Nouakchott ?", ["Mauritanie", "Mali", "Niger", "Tchad"], 0]
+      ],
+      impossible: [
+        ["Quelle est la capitale du Kirghizistan ?", ["Bichkek", "Och", "Douchanbé", "Almaty"], 0],
+        ["Quelle est la capitale des Palaos ?", ["Ngerulmud", "Koror", "Majuro", "Palikir"], 0],
+        ["Quel pays a pour capitale Funafuti ?", ["Tuvalu", "Kiribati", "Nauru", "Vanuatu"], 0],
+        ["Quelle est la capitale des États fédérés de Micronésie ?", ["Palikir", "Majuro", "Tarawa", "Ngerulmud"], 0],
+        ["Quel pays possède la capitale Moroni ?", ["Comores", "Seychelles", "Maurice", "Maldives"], 0],
+        ["Quelle est la capitale de São Tomé-et-Príncipe ?", ["São Tomé", "Praia", "Bissau", "Malabo"], 0],
+        ["Quel pays a pour capitale Yamoussoukro ?", ["Côte d'Ivoire", "Ghana", "Togo", "Bénin"], 0],
+        ["Quelle est la capitale du Timor oriental ?", ["Dili", "Bandar Seri Begawan", "Manille", "Honiara"], 0],
+        ["Quel pays possède la capitale Mbabane ?", ["Eswatini", "Lesotho", "Botswana", "Namibie"], 0],
+        ["Quelle est la capitale des Tonga ?", ["Nuku'alofa", "Apia", "Suva", "Port-Vila"], 0]
+      ]
+    }
+  },
+
+  capitales: {
+    name: "🏛️ Capitales",
+    questions: {
+      facile: [
+        ["Quelle ville est la capitale de l'Allemagne ?", ["Berlin", "Munich", "Hambourg", "Francfort"], 0],
+        ["Quelle ville est la capitale du Canada ?", ["Ottawa", "Toronto", "Montréal", "Vancouver"], 0],
+        ["Quelle ville est la capitale de l'Australie ?", ["Canberra", "Sydney", "Melbourne", "Perth"], 0],
+        ["Quelle ville est la capitale du Portugal ?", ["Lisbonne", "Porto", "Braga", "Faro"], 0],
+        ["Quelle ville est la capitale de la Grèce ?", ["Athènes", "Thessalonique", "Patras", "Sparte"], 0],
+        ["Quelle ville est la capitale de la Chine ?", ["Pékin", "Shanghai", "Hong Kong", "Nankin"], 0],
+        ["Quelle ville est la capitale de l'Égypte ?", ["Le Caire", "Alexandrie", "Gizeh", "Louxor"], 0],
+        ["Quelle ville est la capitale de l'Inde ?", ["New Delhi", "Mumbai", "Kolkata", "Chennai"], 0],
+        ["Quelle ville est la capitale du Brésil ?", ["Brasília", "Rio de Janeiro", "São Paulo", "Salvador"], 0],
+        ["Quelle ville est la capitale du Mexique ?", ["Mexico", "Cancún", "Guadalajara", "Monterrey"], 0]
+      ],
+      difficile: [
+        ["Quelle est la capitale de la Lettonie ?", ["Riga", "Vilnius", "Tallinn", "Kaunas"], 0],
+        ["Quelle est la capitale de la Lituanie ?", ["Vilnius", "Riga", "Tallinn", "Klaipėda"], 0],
+        ["Quelle est la capitale de l'Estonie ?", ["Tallinn", "Riga", "Vilnius", "Tartu"], 0],
+        ["Quelle est la capitale de la Bulgarie ?", ["Sofia", "Varna", "Plovdiv", "Bourgas"], 0],
+        ["Quelle est la capitale de la Slovénie ?", ["Ljubljana", "Maribor", "Zagreb", "Sarajevo"], 0],
+        ["Quelle est la capitale de la Croatie ?", ["Zagreb", "Split", "Dubrovnik", "Rijeka"], 0],
+        ["Quelle est la capitale de la Serbie ?", ["Belgrade", "Novi Sad", "Niš", "Skopje"], 0],
+        ["Quelle est la capitale de l'Albanie ?", ["Tirana", "Durrës", "Pristina", "Podgorica"], 0],
+        ["Quelle est la capitale de la Bosnie-Herzégovine ?", ["Sarajevo", "Mostar", "Banja Luka", "Tuzla"], 0],
+        ["Quelle est la capitale du Monténégro ?", ["Podgorica", "Cetinje", "Kotor", "Budva"], 0]
+      ],
+      impossible: [
+        ["Quelle est la capitale de Kiribati ?", ["Tarawa-Sud", "Betio", "Bairiki", "Tabiteuea"], 0],
+        ["Quelle est la capitale de Nauru ?", ["Yaren", "Aiwo", "Anabar", "Meneng"], 0],
+        ["Quelle est la capitale de Tuvalu ?", ["Funafuti", "Vaiaku", "Nanumea", "Nukulaelae"], 0],
+        ["Quelle est la capitale de Vanuatu ?", ["Port-Vila", "Luganville", "Isangel", "Lakatoro"], 0],
+        ["Quelle est la capitale des Îles Marshall ?", ["Majuro", "Ebeye", "Jaluit", "Kwajalein"], 0],
+        ["Quelle est la capitale des Îles Salomon ?", ["Honiara", "Gizo", "Auki", "Tulagi"], 0],
+        ["Quelle est la capitale des Samoa ?", ["Apia", "Salelologa", "Asau", "Mulifanua"], 0],
+        ["Quelle est la capitale des Fidji ?", ["Suva", "Nadi", "Lautoka", "Labasa"], 0],
+        ["Quelle est la capitale des Seychelles ?", ["Victoria", "Beau Vallon", "Anse Royale", "Takamaka"], 0],
+        ["Quelle est la capitale des Maldives ?", ["Malé", "Addu City", "Fuvahmulah", "Kulhudhuffushi"], 0]
+      ]
+    }
+  },
+
+  drapeaux: {
+    name: "🏳️ Drapeaux",
+    questions: {
+      facile: [
+        ["Quel pays possède un drapeau bleu, blanc et rouge en bandes verticales ?", ["France", "Italie", "Irlande", "Belgique"], 0],
+        ["Quel pays possède un drapeau rouge avec une feuille d'érable ?", ["Canada", "Autriche", "Danemark", "Suisse"], 0],
+        ["Quel pays possède un drapeau blanc avec un cercle rouge ?", ["Japon", "Bangladesh", "Palaos", "Corée du Sud"], 0],
+        ["Quel pays possède un drapeau vert, blanc et rouge ?", ["Italie", "France", "Pays-Bas", "Allemagne"], 0],
+        ["Quel pays possède une croix blanche sur fond rouge ?", ["Suisse", "Danemark", "Angleterre", "Autriche"], 0],
+        ["Quel pays possède un drapeau bleu avec une croix blanche ?", ["Écosse", "Finlande", "Grèce", "Israël"], 0],
+        ["Quel pays possède un drapeau jaune, bleu et rouge ?", ["Colombie", "Roumanie", "Belgique", "Lituanie"], 0],
+        ["Quel pays possède un drapeau rouge avec une étoile jaune ?", ["Vietnam", "Chine", "Maroc", "Turquie"], 0],
+        ["Quel pays possède un drapeau rouge avec un croissant blanc ?", ["Turquie", "Tunisie", "Pakistan", "Algérie"], 0],
+        ["Quel pays possède un drapeau noir, jaune et rouge ?", ["Belgique", "Allemagne", "Roumanie", "Espagne"], 0]
+      ],
+      difficile: [
+        ["Quel pays possède un drapeau rouge avec un dragon ?", ["Bhoutan", "Pays de Galles", "Chine", "Monténégro"], 0],
+        ["Quel pays possède un drapeau avec un cèdre au centre ?", ["Liban", "Canada", "Chypre", "Jordanie"], 0],
+        ["Quel pays possède un drapeau avec une carte de son territoire ?", ["Chypre", "Kosovo", "Portugal", "Croatie"], 0],
+        ["Quel pays possède un drapeau rouge avec un aigle noir bicéphale ?", ["Albanie", "Monténégro", "Serbie", "Macédoine"], 0],
+        ["Quel pays possède un drapeau avec un soleil à visage humain ?", ["Argentine", "Uruguay", "Kazakhstan", "Kirghizistan"], 0],
+        ["Quel pays possède un drapeau bleu clair avec un soleil et un aigle ?", ["Kazakhstan", "Ouzbékistan", "Mongolie", "Turkménistan"], 0],
+        ["Quel pays possède un drapeau rouge et blanc avec un bouclier portant deux chèvres ?", ["Andorre", "Saint-Marin", "Liechtenstein", "Monaco"], 0],
+        ["Quel pays possède un drapeau avec un trident noir ?", ["Barbade", "Jamaïque", "Bahamas", "Grenade"], 0],
+        ["Quel pays possède un drapeau bleu avec une étoile jaune à huit branches ?", ["Nauru", "Somalie", "Palau", "Micronésie"], 0],
+        ["Quel pays possède un drapeau avec un tapis traditionnel ?", ["Turkménistan", "Ouzbékistan", "Azerbaïdjan", "Tadjikistan"], 0]
+      ],
+      impossible: [
+        ["Quel pays possède un drapeau dont la couleur dominante est orange avec un aigle ?", ["Bhoutan", "Irlande", "Inde", "Niger"], 0],
+        ["Quel pays possède un drapeau comportant une arme traditionnelle et une houe ?", ["Mozambique", "Angola", "Zimbabwe", "Zambie"], 0],
+        ["Quel pays possède un drapeau avec un akagera et des étoiles ?", ["Rwanda", "Burundi", "Ouganda", "Malawi"], 0],
+        ["Quel pays possède un drapeau représentant une île jaune sur fond bleu ?", ["Palaos", "Chypre", "Nauru", "Micronésie"], 0],
+        ["Quel pays possède un drapeau avec un oiseau de paradis ?", ["Papouasie-Nouvelle-Guinée", "Fidji", "Vanuatu", "Îles Salomon"], 0],
+        ["Quel pays possède un drapeau avec une roue de Dharma ?", ["Bhoutan", "Inde", "Népal", "Sri Lanka"], 0],
+        ["Quel pays possède un drapeau avec un fusil et une houe ?", ["Mozambique", "Angola", "Zimbabwe", "Namibie"], 0],
+        ["Quel pays possède un drapeau avec un soleil blanc sur fond rouge et bleu ?", ["Philippines", "Taïwan", "Corée du Sud", "Mongolie"], 0],
+        ["Quel pays possède un drapeau avec une lance et un bouclier masai ?", ["Kenya", "Tanzanie", "Ouganda", "Éthiopie"], 0],
+        ["Quel pays possède un drapeau avec un aigle tenant une bannière ?", ["Mexique", "Albanie", "Égypte", "Zambie"], 0]
+      ]
+    }
+  },
+
+  continents: {
+    name: "🗺️ Continents",
+    questions: {
+      facile: [
+        ["Quel est le plus grand continent ?", ["Asie", "Afrique", "Europe", "Amérique"], 0],
+        ["Quel continent contient le Sahara ?", ["Afrique", "Asie", "Europe", "Océanie"], 0],
+        ["Quel continent contient la France ?", ["Europe", "Asie", "Afrique", "Amérique"], 0],
+        ["Quel continent contient le Brésil ?", ["Amérique du Sud", "Afrique", "Asie", "Europe"], 0],
+        ["Quel continent contient le Japon ?", ["Asie", "Europe", "Océanie", "Amérique"], 0],
+        ["Quel continent contient l'Australie ?", ["Océanie", "Asie", "Afrique", "Europe"], 0],
+        ["Quel continent est principalement couvert par la glace ?", ["Antarctique", "Europe", "Asie", "Afrique"], 0],
+        ["Quel continent contient l'Égypte ?", ["Afrique", "Asie", "Europe", "Océanie"], 0],
+        ["Quel continent contient le Canada ?", ["Amérique du Nord", "Europe", "Asie", "Océanie"], 0],
+        ["Quel continent contient l'Inde ?", ["Asie", "Afrique", "Europe", "Océanie"], 0]
+      ],
+      difficile: [
+        ["Quel continent possède le plus grand nombre de pays ?", ["Afrique", "Asie", "Europe", "Amérique du Sud"], 0],
+        ["Quel continent est traversé par l'équateur et le méridien de Greenwich ?", ["Afrique", "Asie", "Europe", "Amérique"], 0],
+        ["Quel continent possède le plus grand désert chaud du monde ?", ["Afrique", "Asie", "Australie", "Amérique"], 0],
+        ["Quel continent est entièrement situé dans l'hémisphère sud ?", ["Antarctique", "Europe", "Asie", "Amérique du Nord"], 0],
+        ["Quel continent contient le lac Baïkal ?", ["Asie", "Europe", "Afrique", "Amérique"], 0],
+        ["Quel continent contient le fleuve Amazone ?", ["Amérique du Sud", "Afrique", "Asie", "Océanie"], 0],
+        ["Quel continent contient les Alpes ?", ["Europe", "Asie", "Afrique", "Amérique"], 0],
+        ["Quel continent contient le désert de Gobi ?", ["Asie", "Afrique", "Australie", "Amérique"], 0],
+        ["Quel continent contient Madagascar ?", ["Afrique", "Asie", "Europe", "Océanie"], 0],
+        ["Quel continent contient la Nouvelle-Zélande ?", ["Océanie", "Asie", "Europe", "Amérique"], 0]
+      ],
+      impossible: [
+        ["Quel continent possède la plus grande superficie totale ?", ["Asie", "Afrique", "Amérique du Nord", "Europe"], 0],
+        ["Quel continent est le seul traversé par les trois grands océans Atlantique, Pacifique et Indien ?", ["Asie", "Afrique", "Europe", "Amérique du Sud"], 0],
+        ["Quel continent contient le point le plus bas de la surface terrestre hors océans ?", ["Asie", "Afrique", "Europe", "Amérique du Nord"], 0],
+        ["Quel continent possède le plus grand nombre de fuseaux horaires si l'on compte ses territoires ?", ["Europe", "Asie", "Amérique du Nord", "Océanie"], 0],
+        ["Quel continent contient le lac Titicaca ?", ["Amérique du Sud", "Afrique", "Asie", "Europe"], 0],
+        ["Quel continent contient le désert d'Atacama ?", ["Amérique du Sud", "Afrique", "Asie", "Océanie"], 0],
+        ["Quel continent contient le mont Elbrouz ?", ["Europe", "Asie", "Afrique", "Amérique"], 0],
+        ["Quel continent contient la péninsule du Kamtchatka ?", ["Asie", "Europe", "Amérique du Nord", "Océanie"], 0],
+        ["Quel continent contient le détroit de Béring sur son côté occidental ?", ["Asie", "Europe", "Afrique", "Océanie"], 0],
+        ["Quel continent contient la péninsule Arabique ?", ["Asie", "Afrique", "Europe", "Océanie"], 0]
+      ]
+    }
+  },
+
+  montagnes: {
+    name: "🏔️ Montagnes",
+    questions: {
+      facile: [
+        ["Quel est le plus haut sommet du monde ?", ["Everest", "K2", "Mont Blanc", "Kilimandjaro"], 0],
+        ["Dans quelle chaîne se trouve le Mont Blanc ?", ["Alpes", "Himalaya", "Andes", "Rocheuses"], 0],
+        ["Dans quel pays se trouve principalement le Kilimandjaro ?", ["Tanzanie", "Kenya", "Éthiopie", "Ouganda"], 0],
+        ["Quelle chaîne traverse plusieurs pays d'Amérique du Sud ?", ["Andes", "Alpes", "Himalaya", "Rocheuses"], 0],
+        ["Le K2 appartient à quelle chaîne ?", ["Karakoram", "Alpes", "Andes", "Atlas"], 0],
+        ["Quel sommet est situé en Tanzanie ?", ["Kilimandjaro", "Everest", "Elbrouz", "Aconcagua"], 0],
+        ["Quelle chaîne montagneuse se trouve en Europe ?", ["Alpes", "Himalaya", "Andes", "Hindou Kouch"], 0],
+        ["Quel sommet est le plus haut d'Afrique ?", ["Kilimandjaro", "Mont Kenya", "Ras Dashen", "Toubkal"], 0],
+        ["Quel sommet est le plus haut d'Europe selon la définition géographique la plus courante ?", ["Elbrouz", "Mont Blanc", "Cervin", "Grossglockner"], 0],
+        ["Quel sommet se trouve au Népal et au Tibet ?", ["Everest", "Mont Blanc", "Kilimandjaro", "Aconcagua"], 0]
+      ],
+      difficile: [
+        ["Quel est le plus haut sommet des Andes ?", ["Aconcagua", "Huascarán", "Chimborazo", "Ojos del Salado"], 0],
+        ["Quel est le plus haut sommet d'Amérique du Nord ?", ["Denali", "Mont Logan", "Pico de Orizaba", "Mont Whitney"], 0],
+        ["Quel est le plus haut sommet du Japon ?", ["Mont Fuji", "Hotaka", "Yari", "Ontake"], 0],
+        ["Quel est le plus haut sommet des Alpes ?", ["Mont Blanc", "Dufourspitze", "Matterhorn", "Gran Paradiso"], 0],
+        ["Quel est le plus haut sommet de Nouvelle-Zélande ?", ["Aoraki / Mont Cook", "Ruapehu", "Taranaki", "Aspiring"], 0],
+        ["Quel sommet est aussi appelé Sagarmatha ?", ["Everest", "K2", "Makalu", "Lhotse"], 0],
+        ["Quel est le plus haut sommet d'Amérique du Sud ?", ["Aconcagua", "Chimborazo", "Huascarán", "Llullaillaco"], 0],
+        ["Quel sommet est surnommé la montagne la plus haute d'Afrique ?", ["Kilimandjaro", "Mont Kenya", "Toubkal", "Ras Dashen"], 0],
+        ["Quel est le plus haut sommet de Turquie ?", ["Ararat", "Erciyes", "Suphan", "Kaçkar"], 0],
+        ["Quel sommet est situé dans les Rocheuses canadiennes ?", ["Mont Robson", "Denali", "Aconcagua", "Mont Elbrouz"], 0]
+      ],
+      impossible: [
+        ["Quel est le troisième plus haut sommet du monde ?", ["Kangchenjunga", "Lhotse", "Makalu", "Cho Oyu"], 0],
+        ["Quel sommet est le quatrième plus haut du monde ?", ["Lhotse", "Makalu", "Cho Oyu", "Manaslu"], 0],
+        ["Quel sommet est le huitième plus haut du monde ?", ["Manaslu", "Nanga Parbat", "Annapurna I", "Dhaulagiri"], 0],
+        ["Quel est le plus haut sommet de Papouasie-Nouvelle-Guinée ?", ["Mont Wilhelm", "Mont Giluwe", "Mont Victoria", "Mont Hagen"], 0],
+        ["Quel est le plus haut sommet de l'Antarctique ?", ["Vinson", "Erebus", "Kirkpatrick", "Sidley"], 0],
+        ["Quel est le plus haut sommet des Alpes suisses ?", ["Pointe Dufour", "Weisshorn", "Dom", "Matterhorn"], 0],
+        ["Quel est le plus haut sommet d'Indonésie ?", ["Puncak Jaya", "Kerinci", "Rinjani", "Semeru"], 0],
+        ["Quel sommet est le plus haut d'Irlande ?", ["Carrauntoohil", "Lugnaquilla", "Brandon", "Galtymore"], 0],
+        ["Quel est le plus haut sommet de Scandinavie ?", ["Galdhøpiggen", "Kebnekaise", "Snøhetta", "Glittertind"], 0],
+        ["Quel est le plus haut sommet du Caucase ?", ["Elbrouz", "Dykh-Tau", "Shkhara", "Kazbek"], 0]
+      ]
+    }
+  },
+
+  oceans: {
+    name: "🌊 Océans et mers",
+    questions: {
+      facile: [
+        ["Quel est le plus grand océan ?", ["Pacifique", "Atlantique", "Indien", "Arctique"], 0],
+        ["Quel océan sépare principalement l'Europe et l'Amérique ?", ["Atlantique", "Pacifique", "Indien", "Arctique"], 0],
+        ["Quel océan entoure l'Antarctique ?", ["Austral", "Atlantique", "Pacifique", "Indien"], 0],
+        ["Quel océan se trouve entre l'Afrique et l'Australie ?", ["Indien", "Atlantique", "Pacifique", "Arctique"], 0],
+        ["Quel océan est au nord du Canada ?", ["Arctique", "Atlantique", "Pacifique", "Indien"], 0],
+        ["Quelle mer borde le sud de la France ?", ["Méditerranée", "Baltique", "Noire", "Rouge"], 0],
+        ["Quelle mer se trouve entre l'Europe et l'Afrique ?", ["Méditerranée", "Baltique", "Caspienne", "Caraïbes"], 0],
+        ["Quelle mer borde Israël et la Jordanie ?", ["Morte", "Rouge", "Noire", "Baltique"], 0],
+        ["Quelle mer se trouve entre l'Europe et l'Asie ?", ["Noire", "Rouge", "Baltique", "Caraïbes"], 0],
+        ["Quel océan borde la côte est des États-Unis ?", ["Atlantique", "Pacifique", "Indien", "Arctique"], 0]
+      ],
+      difficile: [
+        ["Quelle est la mer située entre l'Arabie et l'Afrique ?", ["Mer Rouge", "Mer Noire", "Mer Caspienne", "Mer d'Arabie"], 0],
+        ["Quelle mer est presque entièrement entourée de terres ?", ["Mer Baltique", "Mer des Caraïbes", "Mer d'Arabie", "Mer de Béring"], 0],
+        ["Quel détroit sépare l'Europe de l'Afrique à l'ouest de la Méditerranée ?", ["Gibraltar", "Bosphore", "Dardanelles", "Ormuz"], 0],
+        ["Quel détroit relie la mer Noire à la mer de Marmara ?", ["Bosphore", "Gibraltar", "Ormuz", "Malacca"], 0],
+        ["Quel détroit relie la mer Rouge au golfe d'Aden ?", ["Bab-el-Mandeb", "Bosphore", "Ormuz", "Malacca"], 0],
+        ["Quel détroit sépare l'Asie de l'Amérique du Nord ?", ["Béring", "Gibraltar", "Magellan", "Ormuz"], 0],
+        ["Quel océan borde la côte ouest de l'Amérique du Sud ?", ["Pacifique", "Atlantique", "Indien", "Austral"], 0],
+        ["Quelle mer borde la Turquie au nord ?", ["Mer Noire", "Mer Égée", "Méditerranée", "Mer de Marmara"], 0],
+        ["Quelle mer borde la Turquie à l'ouest ?", ["Mer Égée", "Mer Noire", "Mer Rouge", "Mer Caspienne"], 0],
+        ["Quel océan est situé entre l'Afrique et l'Amérique du Sud ?", ["Atlantique", "Pacifique", "Indien", "Arctique"], 0]
+      ],
+      impossible: [
+        ["Quel est le point le plus profond connu des océans ?", ["Challenger Deep", "Tonga Deep", "Puerto Rico Trench", "Java Trench"], 0],
+        ["Dans quelle fosse se trouve Challenger Deep ?", ["Fosse des Mariannes", "Fosse des Tonga", "Fosse des Philippines", "Fosse du Japon"], 0],
+        ["Quelle mer est considérée comme la plus salée parmi les grandes mers intérieures ?", ["Mer Morte", "Mer Rouge", "Mer Caspienne", "Mer Noire"], 0],
+        ["Quel détroit relie l'océan Indien au Pacifique via l'archipel indonésien ?", ["Détroit de Malacca", "Détroit de Béring", "Détroit de Gibraltar", "Bosphore"], 0],
+        ["Quelle mer se situe entre la péninsule Arabique et l'Inde ?", ["Mer d'Arabie", "Mer Rouge", "Mer Caspienne", "Mer d'Andaman"], 0],
+        ["Quelle mer se trouve au nord de la Sibérie ?", ["Mer de Kara", "Mer Rouge", "Mer d'Arabie", "Mer des Caraïbes"], 0],
+        ["Quelle mer borde la côte nord de la Turquie et une partie de la Russie ?", ["Mer Noire", "Mer Égée", "Mer Caspienne", "Mer Adriatique"], 0],
+        ["Quel océan possède la fosse des Tonga ?", ["Pacifique", "Indien", "Atlantique", "Austral"], 0],
+        ["Quel océan contient la dorsale médio-atlantique ?", ["Atlantique", "Pacifique", "Indien", "Arctique"], 0],
+        ["Quel océan contient la fosse de Porto Rico ?", ["Atlantique", "Pacifique", "Indien", "Austral"], 0]
+      ]
+    }
+  },
+
+  monuments: {
+    name: "🏛️ Monuments",
+    questions: {
+      facile: [
+        ["Dans quelle ville se trouve la Tour Eiffel ?", ["Paris", "Lyon", "Rome", "Madrid"], 0],
+        ["Dans quelle ville se trouve le Colisée ?", ["Rome", "Athènes", "Paris", "Milan"], 0],
+        ["Dans quel pays se trouve le Taj Mahal ?", ["Inde", "Pakistan", "Népal", "Bangladesh"], 0],
+        ["Dans quelle ville se trouve Big Ben ?", ["Londres", "Paris", "Dublin", "Édimbourg"], 0],
+        ["Dans quel pays se trouve la Statue de la Liberté ?", ["États-Unis", "Canada", "France", "Royaume-Uni"], 0],
+        ["Dans quel pays se trouve le Machu Picchu ?", ["Pérou", "Chili", "Bolivie", "Équateur"], 0],
+        ["Dans quel pays se trouvent les pyramides de Gizeh ?", ["Égypte", "Soudan", "Libye", "Tunisie"], 0],
+        ["Dans quelle ville se trouve la Sagrada Família ?", ["Barcelone", "Madrid", "Séville", "Valence"], 0],
+        ["Dans quel pays se trouve le Christ Rédempteur ?", ["Brésil", "Argentine", "Chili", "Pérou"], 0],
+        ["Dans quel pays se trouve Petra ?", ["Jordanie", "Israël", "Égypte", "Syrie"], 0]
+      ],
+      difficile: [
+        ["Dans quel pays se trouve Angkor Wat ?", ["Cambodge", "Thaïlande", "Laos", "Vietnam"], 0],
+        ["Dans quelle ville se trouve le palais de l'Alhambra ?", ["Grenade", "Séville", "Madrid", "Cordoue"], 0],
+        ["Dans quel pays se trouve Borobudur ?", ["Indonésie", "Malaisie", "Thaïlande", "Philippines"], 0],
+        ["Dans quelle ville se trouve le monument de l'Arc de Triomphe ?", ["Paris", "Bruxelles", "Berlin", "Vienne"], 0],
+        ["Dans quel pays se trouve le temple de Kiyomizu-dera ?", ["Japon", "Chine", "Corée du Sud", "Vietnam"], 0],
+        ["Dans quelle ville se trouve la Mosquée bleue historique ?", ["Istanbul", "Ankara", "Le Caire", "Damas"], 0],
+        ["Dans quel pays se trouve le site de Chichén Itzá ?", ["Mexique", "Guatemala", "Belize", "Pérou"], 0],
+        ["Dans quel pays se trouve le temple d'Abou Simbel ?", ["Égypte", "Jordanie", "Soudan", "Libye"], 0],
+        ["Dans quelle ville se trouve le Kremlin historique ?", ["Moscou", "Kiev", "Varsovie", "Minsk"], 0],
+        ["Dans quel pays se trouve le temple du Ciel ?", ["Chine", "Japon", "Corée du Sud", "Mongolie"], 0]
+      ],
+      impossible: [
+        ["Dans quel pays se trouve le complexe de Bagan ?", ["Myanmar", "Cambodge", "Laos", "Thaïlande"], 0],
+        ["Dans quel pays se trouve le site de Sigiriya ?", ["Sri Lanka", "Inde", "Népal", "Bhoutan"], 0],
+        ["Dans quel pays se trouve la cité antique de Palmyre ?", ["Syrie", "Jordanie", "Irak", "Liban"], 0],
+        ["Dans quel pays se trouve le monastère de Rila ?", ["Bulgarie", "Roumanie", "Serbie", "Grèce"], 0],
+        ["Dans quel pays se trouve le site de Lalibela ?", ["Éthiopie", "Érythrée", "Soudan", "Kenya"], 0],
+        ["Dans quel pays se trouve le site archéologique de Hattusa ?", ["Turquie", "Iran", "Irak", "Syrie"], 0],
+        ["Dans quel pays se trouve le monastère de Mont-Saint-Michel ?", ["France", "Belgique", "Suisse", "Luxembourg"], 0],
+        ["Dans quel pays se trouve le site de Tiwanaku ?", ["Bolivie", "Pérou", "Chili", "Équateur"], 0],
+        ["Dans quel pays se trouve le complexe de Samarcande historique ?", ["Ouzbékistan", "Kazakhstan", "Turkménistan", "Tadjikistan"], 0],
+        ["Dans quel pays se trouve le temple de Preah Vihear ?", ["Cambodge", "Thaïlande", "Laos", "Vietnam"], 0]
+      ]
+    }
+  },
+
+  villes: {
+    name: "🏙️ Villes du monde",
+    questions: {
+      facile: [
+        ["Quelle ville est la plus peuplée du Japon ?", ["Tokyo", "Osaka", "Kyoto", "Nagoya"], 0],
+        ["Quelle ville est connue pour ses canaux et ses gondoles ?", ["Venise", "Milan", "Naples", "Turin"], 0],
+        ["Quelle ville est surnommée la Big Apple ?", ["New York", "Los Angeles", "Chicago", "Boston"], 0],
+        ["Quelle ville française est connue pour sa promenade des Anglais ?", ["Nice", "Cannes", "Marseille", "Toulouse"], 0],
+        ["Quelle ville est célèbre pour le carnaval au Brésil ?", ["Rio de Janeiro", "Brasília", "Salvador", "Recife"], 0],
+        ["Quelle ville est connue pour ses gratte-ciel et Marina Bay ?", ["Singapour", "Hong Kong", "Tokyo", "Séoul"], 0],
+        ["Quelle ville est surnommée la ville éternelle ?", ["Rome", "Athènes", "Paris", "Londres"], 0],
+        ["Quelle ville est connue pour ses tramways jaunes ?", ["Lisbonne", "Madrid", "Rome", "Porto"], 0],
+        ["Quelle ville est célèbre pour l'Opéra en forme de voiles ?", ["Sydney", "Melbourne", "Perth", "Brisbane"], 0],
+        ["Quelle ville est traversée par la Seine ?", ["Paris", "Lyon", "Lille", "Bordeaux"], 0]
+      ],
+      difficile: [
+        ["Quelle ville est située sur deux continents ?", ["Istanbul", "Athènes", "Le Caire", "Tbilissi"], 0],
+        ["Quelle ville est la plus haute capitale nationale du monde ?", ["La Paz", "Quito", "Bogota", "Mexico"], 0],
+        ["Quelle ville est surnommée la ville aux cent clochers ?", ["Prague", "Vienne", "Budapest", "Cracovie"], 0],
+        ["Quelle ville est connue historiquement sous le nom de Constantinople ?", ["Istanbul", "Izmir", "Ankara", "Bursa"], 0],
+        ["Quelle ville est la principale métropole de la Catalogne ?", ["Barcelone", "Madrid", "Valence", "Bilbao"], 0],
+        ["Quelle ville est située au bord du lac Léman ?", ["Genève", "Zurich", "Berne", "Bâle"], 0],
+        ["Quelle ville est célèbre pour le Golden Gate Bridge ?", ["San Francisco", "Seattle", "Los Angeles", "San Diego"], 0],
+        ["Quelle ville est connue pour le Burj Khalifa ?", ["Dubaï", "Abou Dabi", "Doha", "Riyad"], 0],
+        ["Quelle ville est traversée par le Danube et capitale de l'Autriche ?", ["Vienne", "Prague", "Budapest", "Bratislava"], 0],
+        ["Quelle ville est célèbre pour ses thermes et son Parlement sur le Danube ?", ["Budapest", "Vienne", "Bratislava", "Belgrade"], 0]
+      ],
+      impossible: [
+        ["Quelle ville est la capitale la plus septentrionale d'un État souverain ?", ["Reykjavik", "Oslo", "Helsinki", "Stockholm"], 0],
+        ["Quelle ville est située au confluent des rivières Tibre et Aniene ?", ["Rome", "Florence", "Pérouse", "Naples"], 0],
+        ["Quelle ville est connue historiquement sous le nom de Byzantion ?", ["Istanbul", "Athènes", "Thessalonique", "Smyrne"], 0],
+        ["Quelle ville est située à proximité immédiate du lac Titicaca et constitue un centre majeur de l'Altiplano bolivien ?", ["La Paz", "Sucre", "Potosí", "Oruro"], 0],
+        ["Quelle ville est la capitale située sur les rives du fleuve Pruth ?", ["Chișinău", "Bucarest", "Sofia", "Kiev"], 0],
+        ["Quelle ville est bâtie sur plusieurs collines et traversée par le Tage ?", ["Lisbonne", "Porto", "Madrid", "Séville"], 0],
+        ["Quelle ville est historiquement associée au quartier de Montmartre ?", ["Paris", "Bruxelles", "Lyon", "Rouen"], 0],
+        ["Quelle ville est située près du delta du Mékong ?", ["Hô Chi Minh-Ville", "Hanoï", "Da Nang", "Huê"], 0],
+        ["Quelle ville est connue sous le nom de Tenochtitlan dans son histoire préhispanique ?", ["Mexico", "Puebla", "Oaxaca", "Veracruz"], 0],
+        ["Quelle ville est située à l'embouchure du Tage ?", ["Lisbonne", "Porto", "Faro", "Coimbra"], 0]
+      ]
+    }
+  },
+
+  nature: {
+    name: "🌋 Nature et volcans",
+    questions: {
+      facile: [
+        ["Quel est le plus grand désert chaud du monde ?", ["Sahara", "Gobi", "Kalahari", "Atacama"], 0],
+        ["Quel animal est le plus grand mammifère du monde ?", ["Baleine bleue", "Éléphant", "Girafe", "Orque"], 0],
+        ["Quel est le plus grand océan ?", ["Pacifique", "Atlantique", "Indien", "Arctique"], 0],
+        ["Quel volcan célèbre domine l'île de Sicile ?", ["Etna", "Vésuve", "Stromboli", "Santorin"], 0],
+        ["Quel fleuve est associé à l'Amazonie ?", ["Amazone", "Nil", "Danube", "Gange"], 0],
+        ["Quel est le plus grand animal terrestre ?", ["Éléphant d'Afrique", "Rhinocéros", "Hippopotame", "Girafe"], 0],
+        ["Quel volcan se trouve près de Naples ?", ["Vésuve", "Etna", "Krakatoa", "Fuji"], 0],
+        ["Quel désert couvre une grande partie de l'Afrique du Nord ?", ["Sahara", "Namib", "Atacama", "Sonora"], 0],
+        ["Quel animal est célèbre pour sa bosse dans les déserts ?", ["Dromadaire", "Yak", "Bison", "Lama"], 0],
+        ["Quel arbre produit les glands ?", ["Chêne", "Sapin", "Bouleau", "Palmier"], 0]
+      ],
+      difficile: [
+        ["Quel volcan a connu une éruption majeure en 1883 ?", ["Krakatoa", "Etna", "Vésuve", "Pinatubo"], 0],
+        ["Quel est le plus grand désert du monde en superficie ?", ["Antarctique", "Sahara", "Gobi", "Arabie"], 0],
+        ["Quel lac est le plus profond du monde ?", ["Baïkal", "Tanganyika", "Supérieur", "Victoria"], 0],
+        ["Quel fleuve est généralement considéré comme le plus long d'Europe ?", ["Volga", "Danube", "Rhin", "Dniepr"], 0],
+        ["Quel désert se trouve principalement au Chili ?", ["Atacama", "Namib", "Kalahari", "Gobi"], 0],
+        ["Quel est le plus grand récif corallien du monde ?", ["Grande Barrière de corail", "Récif de Belize", "Récif des Maldives", "Récif de Nouvelle-Calédonie"], 0],
+        ["Quel lac est le plus grand d'Afrique par superficie ?", ["Victoria", "Tanganyika", "Malawi", "Tchad"], 0],
+        ["Quel volcan est le plus haut sommet de l'archipel hawaïen selon son altitude au-dessus du niveau de la mer ?", ["Mauna Kea", "Mauna Loa", "Kīlauea", "Haleakalā"], 0],
+        ["Quel fleuve traverse Budapest ?", ["Danube", "Rhin", "Elbe", "Vistule"], 0],
+        ["Quel désert est célèbre pour ses dunes rouges en Namibie ?", ["Namib", "Kalahari", "Sahara", "Danakil"], 0]
+      ],
+      impossible: [
+        ["Quel est le lac le plus profond d'Afrique ?", ["Tanganyika", "Victoria", "Malawi", "Tchad"], 0],
+        ["Quel volcan est considéré comme l'un des plus actifs au monde et se trouve en Indonésie ?", ["Merapi", "Fuji", "Etna", "Teide"], 0],
+        ["Quel est le point le plus bas des terres émergées ?", ["Rivage de la mer Morte", "Dépression de Danakil", "Vallée de la Mort", "Lac Assal"], 0],
+        ["Quel lac contient la plus grande quantité d'eau douce liquide en surface ?", ["Baïkal", "Victoria", "Supérieur", "Tanganyika"], 0],
+        ["Quel est le plus grand désert non polaire du monde ?", ["Sahara", "Arabie", "Gobi", "Kalahari"], 0],
+        ["Quel volcan constitue le point culminant de l'île de Tenerife ?", ["Teide", "Pico Viejo", "Etna", "Cumbre Vieja"], 0],
+        ["Quel est le plus grand bassin fluvial du monde ?", ["Amazonie", "Congo", "Mississippi", "Nil"], 0],
+        ["Quel désert est réputé être l'un des plus anciens du monde ?", ["Namib", "Sahara", "Gobi", "Atacama"], 0],
+        ["Quel fleuve possède le plus grand débit moyen du monde ?", ["Amazone", "Congo", "Yangtsé", "Mississippi"], 0],
+        ["Quel volcan japonais est un symbole national du pays ?", ["Fuji", "Aso", "Sakurajima", "Unzen"], 0]
+      ]
+    }
+  },
+
+  culture: {
+    name: "🌎 Curiosités du monde",
+    questions: {
+      facile: [
+        ["Quelle langue est principalement parlée au Brésil ?", ["Portugais", "Espagnol", "Français", "Anglais"], 0],
+        ["Quelle monnaie est utilisée au Japon ?", ["Yen", "Won", "Yuan", "Dollar"], 0],
+        ["Quelle monnaie est utilisée au Royaume-Uni ?", ["Livre sterling", "Euro", "Dollar", "Franc"], 0],
+        ["Quelle langue est principalement parlée en Espagne ?", ["Espagnol", "Portugais", "Italien", "Français"], 0],
+        ["Quelle monnaie utilise la Suisse ?", ["Franc suisse", "Euro", "Couronne", "Livre"], 0],
+        ["Quelle langue est officielle au Portugal ?", ["Portugais", "Espagnol", "Français", "Italien"], 0],
+        ["Quelle fête est célèbre au Brésil avec ses défilés ?", ["Carnaval", "Oktoberfest", "Hanami", "Diwali"], 0],
+        ["Quelle ville accueille l'Oktoberfest ?", ["Munich", "Berlin", "Hambourg", "Cologne"], 0],
+        ["Quelle fête des lumières est célèbre en Inde ?", ["Diwali", "Hanami", "Carnaval", "Oktoberfest"], 0],
+        ["Quel alphabet est utilisé couramment pour écrire le russe ?", ["Cyrillique", "Latin", "Grec", "Arabe"], 0]
+      ],
+      difficile: [
+        ["Quelle monnaie est utilisée en Hongrie ?", ["Forint", "Zloty", "Leu", "Kuna"], 0],
+        ["Quelle monnaie est utilisée en Pologne ?", ["Zloty", "Forint", "Euro", "Leu"], 0],
+        ["Quelle monnaie est utilisée en République tchèque ?", ["Couronne tchèque", "Euro", "Forint", "Zloty"], 0],
+        ["Quelle langue officielle est parlée en Islande ?", ["Islandais", "Norvégien", "Danois", "Suédois"], 0],
+        ["Quelle langue est principalement parlée en Iran ?", ["Persan", "Arabe", "Turc", "Kurde"], 0],
+        ["Quelle monnaie utilise la Corée du Sud ?", ["Won", "Yen", "Yuan", "Ringgit"], 0],
+        ["Quelle langue est principalement parlée en Hongrie ?", ["Hongrois", "Finnois", "Polonais", "Tchèque"], 0],
+        ["Quelle fête japonaise célèbre traditionnellement la floraison des cerisiers ?", ["Hanami", "Obon", "Tanabata", "Setsubun"], 0],
+        ["Quelle ville est célèbre pour le festival La Tomatina ?", ["Buñol", "Madrid", "Valence", "Séville"], 0],
+        ["Quelle monnaie est utilisée au Danemark ?", ["Couronne danoise", "Euro", "Franc", "Livre"], 0]
+      ],
+      impossible: [
+        ["Quelle langue officielle est utilisée au Bhoutan ?", ["Dzongkha", "Népalais", "Tibétain", "Hindi"], 0],
+        ["Quelle monnaie officielle utilise le Laos ?", ["Kip", "Baht", "Dong", "Riel"], 0],
+        ["Quelle langue est officielle en Géorgie ?", ["Géorgien", "Arménien", "Russe", "Azéri"], 0],
+        ["Quelle monnaie utilise l'Ouzbékistan ?", ["Sum", "Tenge", "Manat", "Som"], 0],
+        ["Quelle langue est officielle en Arménie ?", ["Arménien", "Géorgien", "Persan", "Azéri"], 0],
+        ["Quelle monnaie utilise l'Azerbaïdjan ?", ["Manat", "Lari", "Dram", "Tenge"], 0],
+        ["Quelle langue est principalement parlée au Kazakhstan ?", ["Kazakh", "Ouzbek", "Kirghiz", "Tadjik"], 0],
+        ["Quelle monnaie utilise le Cambodge ?", ["Riel", "Kip", "Baht", "Dong"], 0],
+        ["Quelle langue est officielle au Timor oriental avec le tétoum ?", ["Portugais", "Espagnol", "Indonésien", "Malais"], 0],
+        ["Quelle monnaie utilise la Mongolie ?", ["Tögrög", "Yen", "Yuan", "Won"], 0]
+      ]
+    }
+  },
+
+  europe: {
+    name: "🇪🇺 Europe",
+    questions: {
+      facile: [
+        ["Quelle est la capitale de la France ?", ["Paris", "Lyon", "Lille", "Nice"], 0],
+        ["Quel pays a la forme d'une botte ?", ["Italie", "Grèce", "Croatie", "Portugal"], 0],
+        ["Quel pays possède Berlin comme capitale ?", ["Allemagne", "Autriche", "Belgique", "Suisse"], 0],
+        ["Quelle est la capitale de la Belgique ?", ["Bruxelles", "Anvers", "Liège", "Gand"], 0],
+        ["Quel pays possède Madrid comme capitale ?", ["Espagne", "Portugal", "Italie", "France"], 0],
+        ["Quelle est la capitale de l'Irlande ?", ["Dublin", "Cork", "Galway", "Limerick"], 0],
+        ["Quel pays possède Vienne comme capitale ?", ["Autriche", "Suisse", "Hongrie", "Slovaquie"], 0],
+        ["Quelle est la capitale de la Norvège ?", ["Oslo", "Bergen", "Trondheim", "Stavanger"], 0],
+        ["Quel pays possède Athènes comme capitale ?", ["Grèce", "Chypre", "Albanie", "Bulgarie"], 0],
+        ["Quelle est la capitale des Pays-Bas ?", ["Amsterdam", "Rotterdam", "La Haye", "Utrecht"], 0]
+      ],
+      difficile: [
+        ["Quelle est la capitale de la Slovénie ?", ["Ljubljana", "Zagreb", "Bratislava", "Sarajevo"], 0],
+        ["Quelle est la capitale de la Slovaquie ?", ["Bratislava", "Ljubljana", "Prague", "Budapest"], 0],
+        ["Quelle est la capitale de la Moldavie ?", ["Chișinău", "Bucarest", "Sofia", "Kiev"], 0],
+        ["Quelle est la capitale de la Macédoine du Nord ?", ["Skopje", "Tirana", "Sofia", "Pristina"], 0],
+        ["Quelle est la capitale de la Bosnie-Herzégovine ?", ["Sarajevo", "Belgrade", "Zagreb", "Podgorica"], 0],
+        ["Quelle est la capitale du Liechtenstein ?", ["Vaduz", "Berne", "Zurich", "Innsbruck"], 0],
+        ["Quelle est la capitale de Saint-Marin ?", ["Saint-Marin", "Rome", "Bologne", "Rimini"], 0],
+        ["Quelle est la capitale de l'Andorre ?", ["Andorre-la-Vieille", "Barcelone", "Toulouse", "Lleida"], 0],
+        ["Quelle est la capitale du Kosovo ?", ["Pristina", "Prizren", "Skopje", "Tirana"], 0],
+        ["Quelle est la capitale de la Lettonie ?", ["Riga", "Tallinn", "Vilnius", "Kaunas"], 0]
+      ],
+      impossible: [
+        ["Quelle est la capitale du Liechtenstein ?", ["Vaduz", "Balzers", "Schaan", "Triesen"], 0],
+        ["Quelle est la capitale de Saint-Marin ?", ["Saint-Marin", "Serravalle", "Borgo Maggiore", "Faetano"], 0],
+        ["Quelle est la capitale d'Andorre ?", ["Andorre-la-Vieille", "Encamp", "Ordino", "La Massana"], 0],
+        ["Quelle est la capitale du Monténégro ?", ["Podgorica", "Cetinje", "Kotor", "Budva"], 0],
+        ["Quelle est la capitale de la Macédoine du Nord ?", ["Skopje", "Ohrid", "Bitola", "Prilep"], 0],
+        ["Quelle est la capitale de la Slovénie ?", ["Ljubljana", "Maribor", "Celje", "Kranj"], 0],
+        ["Quelle est la capitale de la Moldavie ?", ["Chișinău", "Bălți", "Tiraspol", "Cahul"], 0],
+        ["Quelle est la capitale de la Bosnie-Herzégovine ?", ["Sarajevo", "Mostar", "Tuzla", "Zenica"], 0],
+        ["Quelle est la capitale de la Slovaquie ?", ["Bratislava", "Košice", "Prešov", "Žilina"], 0],
+        ["Quelle est la capitale de la Croatie ?", ["Zagreb", "Split", "Rijeka", "Osijek"], 0]
+      ]
+    }
+  },
+
+  asie: {
+    name: "🌏 Asie",
+    questions: {
+      facile: [
+        ["Quelle est la capitale du Japon ?", ["Tokyo", "Kyoto", "Osaka", "Nara"], 0],
+        ["Quelle est la capitale de la Chine ?", ["Pékin", "Shanghai", "Xi'an", "Canton"], 0],
+        ["Quelle est la capitale de l'Inde ?", ["New Delhi", "Mumbai", "Delhi", "Kolkata"], 0],
+        ["Quelle est la capitale de la Corée du Sud ?", ["Séoul", "Busan", "Daegu", "Incheon"], 0],
+        ["Quelle est la capitale de la Thaïlande ?", ["Bangkok", "Phuket", "Chiang Mai", "Pattaya"], 0],
+        ["Quelle est la capitale du Vietnam ?", ["Hanoï", "Hô Chi Minh-Ville", "Huê", "Da Nang"], 0],
+        ["Quelle est la capitale de l'Indonésie ?", ["Jakarta", "Bali", "Surabaya", "Bandung"], 0],
+        ["Quelle est la capitale des Philippines ?", ["Manille", "Cebu", "Davao", "Quezon City"], 0],
+        ["Quelle est la capitale de la Malaisie ?", ["Kuala Lumpur", "Malacca", "George Town", "Johor Bahru"], 0],
+        ["Quelle est la capitale du Népal ?", ["Katmandou", "Pokhara", "Lalitpur", "Biratnagar"], 0]
+      ],
+      difficile: [
+        ["Quelle est la capitale du Laos ?", ["Vientiane", "Luang Prabang", "Pakse", "Savannakhet"], 0],
+        ["Quelle est la capitale du Cambodge ?", ["Phnom Penh", "Siem Reap", "Battambang", "Kampot"], 0],
+        ["Quelle est la capitale du Bhoutan ?", ["Thimphou", "Paro", "Punakha", "Phuentsholing"], 0],
+        ["Quelle est la capitale du Myanmar ?", ["Naypyidaw", "Yangon", "Mandalay", "Bagan"], 0],
+        ["Quelle est la capitale du Brunei ?", ["Bandar Seri Begawan", "Kuala Belait", "Seria", "Tutong"], 0],
+        ["Quelle est la capitale de la Mongolie ?", ["Oulan-Bator", "Erdenet", "Darkhan", "Choibalsan"], 0],
+        ["Quelle est la capitale du Bangladesh ?", ["Dacca", "Chittagong", "Sylhet", "Khulna"], 0],
+        ["Quelle est la capitale du Pakistan ?", ["Islamabad", "Karachi", "Lahore", "Peshawar"], 0],
+        ["Quelle est la capitale du Sri Lanka ?", ["Sri Jayawardenepura Kotte", "Colombo", "Kandy", "Galle"], 0],
+        ["Quelle est la capitale de l'Afghanistan ?", ["Kaboul", "Kandahar", "Herat", "Mazar-e-Charif"], 0]
+      ],
+      impossible: [
+        ["Quelle est la capitale du Turkménistan ?", ["Achgabat", "Mary", "Turkmenabat", "Balkanabat"], 0],
+        ["Quelle est la capitale du Tadjikistan ?", ["Douchanbé", "Khujand", "Kulob", "Qurghonteppa"], 0],
+        ["Quelle est la capitale du Kirghizistan ?", ["Bichkek", "Och", "Naryn", "Karakol"], 0],
+        ["Quelle est la capitale de l'Ouzbékistan ?", ["Tachkent", "Samarcande", "Boukhara", "Khiva"], 0],
+        ["Quelle est la capitale de l'Azerbaïdjan ?", ["Bakou", "Gandja", "Chaki", "Sumqayit"], 0],
+        ["Quelle est la capitale de l'Arménie ?", ["Erevan", "Gyumri", "Vanadzor", "Kapan"], 0],
+        ["Quelle est la capitale de la Géorgie ?", ["Tbilissi", "Batoumi", "Koutaïssi", "Gori"], 0],
+        ["Quelle est la capitale du Kazakhstan ?", ["Astana", "Almaty", "Chymkent", "Aktobe"], 0],
+        ["Quelle est la capitale du Timor oriental ?", ["Dili", "Baucau", "Maliana", "Suai"], 0],
+        ["Quelle est la capitale du Yémen ?", ["Sanaa", "Aden", "Taëz", "Hodeïda"], 0]
+      ]
+    }
+  }
+};
+
+const activeQuizSessions = new Map();
+
+function shuffleQuizQuestions(list) {
+  return [...list]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, Math.min(10, list.length));
+}
+
+function shuffleQuizOptions(question) {
+  const answers = question[1].map((label, index) => ({
+    label,
+    correct: index === question[2]
+  }));
+
+  answers.sort(() => Math.random() - 0.5);
+
+  return {
+    question: question[0],
+    options: answers.map(a => a.label),
+    correctIndex: answers.findIndex(a => a.correct)
+  };
+}
+
 // ==================== DISCUTEBOT ====================
 
 let discuteBotBusy = false;
@@ -2434,6 +2972,167 @@ io.on("connection", socket => {
     io.to(`user-${targetId}`).emit("private_message", message);
   });
 });
+
+
+// ==================== QUIZ API ====================
+
+app.get("/api/games/quizzes", auth, (req, res) => {
+  res.json(
+    Object.entries(QUIZ_BANKS).map(([id, quiz]) => ({
+      id,
+      name: quiz.name,
+      rewards: QUIZ_REWARDS
+    }))
+  );
+});
+
+app.post("/api/games/quiz/start", auth, (req, res) => {
+  const quizId = String(req.body?.quizId || "");
+  const difficulty = String(req.body?.difficulty || "");
+
+  const quiz = QUIZ_BANKS[quizId];
+
+  if (!quiz) {
+    return res.status(400).json({ error: "Quiz invalide." });
+  }
+
+  if (!QUIZ_REWARDS[difficulty]) {
+    return res.status(400).json({ error: "Difficulté invalide." });
+  }
+
+  const questions = quiz.questions[difficulty];
+
+  if (!Array.isArray(questions) || questions.length < 10) {
+    return res.status(500).json({
+      error: "Ce quiz ne possède pas assez de questions."
+    });
+  }
+
+  const selected = shuffleQuizQuestions(questions).map(shuffleQuizOptions);
+
+  const sessionId =
+    `${req.user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
+  activeQuizSessions.set(sessionId, {
+    userId: req.user.id,
+    quizId,
+    difficulty,
+    questions: selected,
+    current: 0,
+    score: 0,
+    finished: false,
+    createdAt: Date.now()
+  });
+
+  res.json({
+    sessionId,
+    quiz: quiz.name,
+    difficulty,
+    reward: QUIZ_REWARDS[difficulty],
+    totalQuestions: selected.length,
+    questions: selected.map(q => ({
+      question: q.question,
+      options: q.options
+    }))
+  });
+});
+
+app.post("/api/games/quiz/answer", auth, (req, res) => {
+  const sessionId = String(req.body?.sessionId || "");
+  const answerIndex = Number(req.body?.answerIndex);
+
+  const session = activeQuizSessions.get(sessionId);
+
+  if (!session || session.userId !== req.user.id) {
+    return res.status(404).json({
+      error: "Partie introuvable."
+    });
+  }
+
+  if (session.finished) {
+    return res.status(400).json({
+      error: "Cette partie est déjà terminée."
+    });
+  }
+
+  if (!Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex > 3) {
+    return res.status(400).json({
+      error: "Réponse invalide."
+    });
+  }
+
+  const question = session.questions[session.current];
+
+  if (!question) {
+    return res.status(400).json({
+      error: "Question introuvable."
+    });
+  }
+
+  const correct = answerIndex === question.correctIndex;
+
+  if (correct) {
+    session.score++;
+  }
+
+  session.current++;
+
+  const finished =
+    session.current >= session.questions.length;
+
+  if (!finished) {
+    return res.json({
+      correct,
+      score: session.score,
+      finished: false,
+      nextQuestion: session.current
+    });
+  }
+
+  session.finished = true;
+
+  const reward =
+    session.score === session.questions.length
+      ? QUIZ_REWARDS[session.difficulty]
+      : 0;
+
+  let newGems = null;
+
+  if (reward > 0) {
+    db.prepare(`
+      UPDATE users
+      SET gems = COALESCE(gems, 0) + ?
+      WHERE id = ?
+    `).run(reward, req.user.id);
+
+    newGems = db.prepare(`
+      SELECT gems
+      FROM users
+      WHERE id = ?
+    `).get(req.user.id)?.gems ?? 0;
+  } else {
+    newGems = db.prepare(`
+      SELECT gems
+      FROM users
+      WHERE id = ?
+    `).get(req.user.id)?.gems ?? 0;
+  }
+
+  setTimeout(() => {
+    activeQuizSessions.delete(sessionId);
+  }, 10 * 60 * 1000);
+
+  return res.json({
+    correct,
+    score: session.score,
+    finished: true,
+    totalQuestions: session.questions.length,
+    won: reward > 0,
+    reward,
+    gems: newGems
+  });
+});
+
 
 server.listen(PORT, () => {
   console.log(`DiscuteApp démarré : http://localhost:${PORT}`);
