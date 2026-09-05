@@ -789,6 +789,95 @@ async function showGems() {
   }
 }
 
+
+async function loadDiscuteBotAdmin() {
+  const box = document.createElement("div");
+  box.className = "card";
+  box.innerHTML = `
+    <h2>🤖 Réglages de DiscuteBot</h2>
+
+    <p>
+      Modifie directement la manière dont DiscuteBot parle dans le chat public.
+    </p>
+
+    <label>🗣️ Façon de parler</label>
+    <select id="discuteBotStyle" style="width:100%;margin-bottom:10px;">
+      <option value="naturel, sympathique et concis">Naturel et sympathique</option>
+      <option value="familier, détendu et proche des utilisateurs">Familier et détendu</option>
+      <option value="drôle, léger et avec quelques petites blagues">Drôle et léger</option>
+      <option value="sérieux, posé et précis">Sérieux et précis</option>
+      <option value="très énergique, enthousiaste et positif">Énergique et enthousiaste</option>
+      <option value="très concis, direct et sans phrases inutiles">Très concis et direct</option>
+    </select>
+
+    <label>😊 Humeur</label>
+    <select id="discuteBotMood" style="width:100%;margin-bottom:10px;">
+      <option value="joyeux et amical">😄 Joyeux</option>
+      <option value="calme et posé">😌 Calme</option>
+      <option value="énergique et enthousiaste">⚡ Énergique</option>
+      <option value="curieux et intéressé">🧐 Curieux</option>
+      <option value="taquin mais toujours respectueux">😏 Taquin</option>
+      <option value="sérieux et concentré">🧠 Sérieux</option>
+    </select>
+
+    <label>✍️ Personnalité personnalisée</label>
+    <textarea
+      id="discuteBotPersonality"
+      maxlength="1500"
+      placeholder="Exemple : aime plaisanter, pose parfois une question pour relancer la discussion..."
+      style="width:100%;min-height:110px;resize:vertical;margin-bottom:10px;"
+    ></textarea>
+
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <input id="discuteBotEnabled" type="checkbox">
+      🤖 DiscuteBot actif
+    </label>
+
+    <button id="saveDiscuteBotSettings">💾 Enregistrer les réglages</button>
+    <p id="discuteBotSettingsMessage"></p>
+  `;
+
+  document.getElementById("content").appendChild(box);
+
+  const style = document.getElementById("discuteBotStyle");
+  const mood = document.getElementById("discuteBotMood");
+  const personality = document.getElementById("discuteBotPersonality");
+  const enabled = document.getElementById("discuteBotEnabled");
+  const message = document.getElementById("discuteBotSettingsMessage");
+
+  try {
+    const settings = await api("/api/admin/discute-bot/settings");
+
+    style.value = settings.speaking_style || style.value;
+    mood.value = settings.mood || mood.value;
+    personality.value = settings.personality || "";
+    enabled.checked = Boolean(settings.enabled);
+  } catch (error) {
+    message.textContent = "❌ " + error.message;
+  }
+
+  document.getElementById("saveDiscuteBotSettings").onclick = async () => {
+    try {
+      const result = await api(
+        "/api/admin/discute-bot/settings",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            speaking_style: style.value,
+            mood: mood.value,
+            personality: personality.value,
+            enabled: enabled.checked
+          })
+        }
+      );
+
+      message.textContent = "✅ " + result.message;
+    } catch (error) {
+      message.textContent = "❌ " + error.message;
+    }
+  };
+}
+
 async function showAdmin() {
   if (!["owner", "admin"].includes(me.role)) {
     alert("Accès refusé.");
@@ -858,6 +947,7 @@ async function showAdmin() {
 
 
   await loadAdminUsers();
+  await loadDiscuteBotAdmin();
 
   /* 🧰 GESTION DES ARTICLES DE LA BOUTIQUE */
   if (me.username === "chilladmin") {
