@@ -717,9 +717,7 @@
       try {
         const response = await fetch("/api/shop/items", {
           credentials: "include",
-            headers: {
-            
-          },
+          headers: {},
           cache: "no-store"
         });
 
@@ -729,6 +727,27 @@
           throw new Error(items.error || "Erreur");
         }
 
+        // Les articles renvoyés par le serveur sont les articles disponibles.
+        const availableIds = new Set(items.map(item => String(item.id)));
+
+        // Cacher réellement les cartes des articles retirés.
+        document.querySelectorAll(".item").forEach(card => {
+          const button = card.querySelector("[onclick]");
+          if (!button) return;
+
+          const onclick = button.getAttribute("onclick") || "";
+          const match = onclick.match(/buyItem\(['"]([^'"]+)['"]/);
+
+          if (!match) return;
+
+          const itemId = String(match[1]);
+
+          card.style.display = availableIds.has(itemId)
+            ? ""
+            : "none";
+        });
+
+        // Mettre à jour les prix et les soldes.
         items.forEach(item => {
           const button = document.querySelector(
             `[onclick="buyItem('${item.id}')"]`
@@ -743,16 +762,14 @@
           if (!price) return;
 
           const discount = Number(item.discount || 0);
+          const oldPrice = Number(item.price || 0);
 
-          // Toujours repartir du prix normal affiché par le serveur
           if (discount <= 0) {
             price.innerHTML =
-              `💎 ${Number(item.price).toLocaleString("fr-FR")} gemmes`;
+              `💎 ${oldPrice.toLocaleString("fr-FR")} gemmes`;
             return;
           }
 
-          // Calcul du nouveau prix directement ici
-          const oldPrice = Number(item.price);
           const newPrice = Math.round(
             oldPrice * (100 - discount) / 100
           );
@@ -780,7 +797,7 @@
         });
 
       } catch (error) {
-        console.error("Impossible de charger les soldes :", error);
+        console.error("Impossible de charger la boutique :", error);
       }
     }
 

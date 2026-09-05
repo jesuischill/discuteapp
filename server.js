@@ -261,6 +261,226 @@ app.post("/api/logout", (req, res) => {
   res.json({ ok: true });
 });
 
+
+/* ADMIN AVANCÉ — GESTION COMPTES */
+
+try {
+  db.exec(`
+    ALTER TABLE public_messages
+    ADD COLUMN is_announcement INTEGER NOT NULL DEFAULT 0
+  `);
+} catch {}
+
+app.get("/api/admin/user-details", auth, adminOnly, (req, res) => {
+  const username = String(req.query.username || "").trim();
+
+  if (!username) {
+    return res.status(400).json({ error: "Pseudo obligatoire." });
+  }
+
+  const user = db.prepare(`
+    SELECT id, username, role, banned, gems, created_at
+    FROM users
+    WHERE username = ?
+  `).get(username);
+
+  if (!user) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  const accessories = db.prepare(`
+    SELECT id, item_id, item_type, item_name, item_data, price, active, created_at
+    FROM purchases
+    WHERE user_id = ?
+    ORDER BY created_at DESC, id DESC
+  `).all(user.id).map(item => {
+    let data = {};
+    try {
+      data = JSON.parse(item.item_data || "{}");
+    } catch {}
+    return {
+      ...item,
+      active: Boolean(item.active),
+      data
+    };
+  });
+
+  res.json({
+    user: {
+      ...user,
+      password: "🔒 Protégé"
+    },
+    accessories
+  });
+});
+
+app.post("/api/admin/users/:id/delete-permanently", auth, adminOnly, (req, res) => {
+  const id = Number(req.params.id);
+
+  if (!Number.isInteger(id) || id <= 0) {
+    return res.status(400).json({ error: "Utilisateur invalide." });
+  }
+
+  if (id === req.user.id) {
+    return res.status(400).json({
+      error: "Tu ne peux pas supprimer ton propre compte depuis ce panneau."
+    });
+  }
+
+  const target = getDbUser(id);
+
+  if (!target) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  if (target.role === "owner" || target.username === "chilladmin") {
+    return res.status(403).json({
+      error: "Le compte propriétaire est protégé."
+    });
+  }
+
+  const deleteUser = db.transaction(() => {
+    const tables = db.prepare(`
+      SELECT name
+      FROM sqlite_master
+      WHERE type = 'table'
+        AND name NOT LIKE 'sqlite_%'
+    `).all();
+
+    for (const table of tables) {
+      const columns = db.prepare(
+        `PRAGMA table_info("${table.name.replace(/"/g, '""')}")`
+      ).all();
+
+      const userColumns = columns
+        .map(c => c.name)
+        .filter(name =>
+          ["user_id", "from_user_id", "to_user_id"].includes(name)
+        );
+
+      for (const column of userColumns) {
+        db.prepare(
+          `DELETE FROM "${table.name.replace(/"/g, '""')}"
+           WHERE "${column.replace(/"/g, '""')}" = ?`
+        ).run(id);
+      }
+    }
+
+    db.prepare("DELETE FROM users WHERE id = ?").run(id);
+  });
+
+  deleteUser();
+
+  disconnectUser(id);
+
+  res.json({
+    success: true,
+    message: `Le compte ${target.username} a été supprimé définitivement.`
+  });
+});
+
+app.post("/api/admin/users/:id/accessory", auth, adminOnly, (req, res) => {
+  const id = Number(req.params.id);
+  const itemId = String(req.body?.itemId || "").trim();
+
+  const target = getDbUser(id);
+
+  if (!target) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  if (!SHOP_ITEMS[itemId]) {
+    return res.status(400).json({ error: "Accessoire invalide." });
+  }
+
+  const item = SHOP_ITEMS[itemId];
+
+  try {
+    db.prepare(`
+      INSERT INTO purchases
+      (user_id, item_id, item_type, item_name, item_data, price, active)
+      VALUES (?, ?, ?, ?, ?, 0, 0)
+    `).run(
+      id,
+      itemId,
+      item.type,
+      item.name,
+      JSON.stringify({})
+    );
+
+    res.json({
+      success: true,
+      message: `${item.name} donné à ${target.username}.`
+    });
+  } catch {
+    res.status(400).json({
+      error: "Cet utilisateur possède déjà cet accessoire."
+    });
+  }
+});
+
+app.delete("/api/admin/users/:id/accessory/:itemId", auth, adminOnly, (req, res) => {
+  const id = Number(req.params.id);
+  const itemId = String(req.params.itemId || "").trim();
+
+  const target = getDbUser(id);
+
+  if (!target) {
+    return res.status(404).json({ error: "Utilisateur introuvable." });
+  }
+
+  const result = db.prepare(`
+    DELETE FROM purchases
+    WHERE user_id = ? AND item_id = ?
+  `).run(id, itemId);
+
+  if (!result.changes) {
+    return res.status(404).json({
+      error: "Cet utilisateur ne possède pas cet accessoire."
+    });
+  }
+
+  res.json({
+    success: true,
+    message: "Accessoire retiré."
+  });
+});
+
+app.post("/api/admin/announcement", auth, adminOnly, (req, res) => {
+  const content = String(req.body?.content || "").trim().slice(0, 1000);
+
+  if (!content) {
+    return res.status(400).json({ error: "Annonce vide." });
+  }
+
+  const result = db.prepare(`
+    INSERT INTO public_messages
+    (user_id, username, content, is_announcement)
+    VALUES (?, ?, ?, 1)
+  `).run(
+    req.user.id,
+    "📢 ADMIN",
+    content
+  );
+
+  const message = {
+    id: result.lastInsertRowid,
+    user_id: req.user.id,
+    username: "📢 ADMIN",
+    content,
+    created_at: new Date().toISOString(),
+    is_announcement: true,
+    system: true
+  };
+
+  io.emit("public_message", message);
+
+  res.json({
+    success: true,
+    message: "Annonce envoyée."
+  });
+});
+
 /* UTILISATEURS */
 app.get("/api/users", auth, (req, res) => {
   const users = db.prepare(`
@@ -323,6 +543,33 @@ db.exec(`
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+
+/* ARTICLES RETIRABLES DE LA BOUTIQUE */
+db.exec(`
+  CREATE TABLE IF NOT EXISTS shop_item_status (
+    item_id TEXT PRIMARY KEY,
+    enabled INTEGER NOT NULL DEFAULT 1
+  )
+`);
+
+function isShopItemEnabled(itemId) {
+  const row = db.prepare(`
+    SELECT enabled
+    FROM shop_item_status
+    WHERE item_id = ?
+  `).get(itemId);
+
+  return row ? Number(row.enabled) === 1 : true;
+}
+
+function setShopItemEnabled(itemId, enabled) {
+  db.prepare(`
+    INSERT INTO shop_item_status (item_id, enabled)
+    VALUES (?, ?)
+    ON CONFLICT(item_id)
+    DO UPDATE SET enabled = excluded.enabled
+  `).run(itemId, enabled ? 1 : 0);
+}
 
 /* SOLDES GLOBALES DE LA BOUTIQUE */
 db.exec(`
@@ -445,15 +692,6 @@ app.post("/api/shop/buy", auth, (req, res) => {
     return res.status(400).json({ error: "Objet invalide." });
   }
 
-  const alreadyOwned = db.prepare(`
-    SELECT id FROM purchases
-    WHERE user_id = ? AND item_id = ?
-  `).get(req.user.id, itemId);
-
-  if (alreadyOwned) {
-    return res.status(400).json({ error: "Tu possèdes déjà cet objet." });
-  }
-
   const buy = db.transaction(() => {
     const user = db.prepare(`
       SELECT id, username, gems FROM users WHERE id = ?
@@ -544,17 +782,72 @@ app.post("/api/admin/shop/discount", auth, (req, res) => {
 
 /* LISTE DES ARTICLES ET SOLDES */
 app.get("/api/shop/items", auth, (req, res) => {
-  const items = Object.entries(SHOP_ITEMS).map(([id, item]) => {
-    const discount = getItemDiscount(id);
+  const items = Object.entries(SHOP_ITEMS)
+    .filter(([id]) => isShopItemEnabled(id))
+    .map(([id, item]) => {
+      const discount = getItemDiscount(id);
 
-    return {
-      id,
-      name: item.name,
-      price: item.price,
-      discount,
-      finalPrice: getDiscountedItemPrice(id, item.price)
-    };
+      return {
+        id,
+        name: item.name,
+        price: item.price,
+        discount,
+        finalPrice: getDiscountedItemPrice(id, item.price)
+      };
+    });
+
+  res.json(items);
+});
+
+
+/* RETIRER OU RÉACTIVER UN ARTICLE DE LA BOUTIQUE */
+app.post("/api/admin/shop/item-status", auth, (req, res) => {
+  if (req.user.username !== "chilladmin") {
+    return res.status(403).json({
+      error: "Réservé au propriétaire."
+    });
+  }
+
+  const itemId = String(req.body?.itemId || "");
+  const enabled = Boolean(req.body?.enabled);
+
+  if (!SHOP_ITEMS[itemId]) {
+    return res.status(400).json({
+      error: "Article invalide."
+    });
+  }
+
+  setShopItemEnabled(itemId, enabled);
+
+  if (!enabled) {
+    db.prepare(`
+      DELETE FROM shop_item_discounts
+      WHERE item_id = ?
+    `).run(itemId);
+  }
+
+  res.json({
+    message: enabled
+      ? "Article réactivé au prix normal."
+      : "Article retiré de la boutique."
   });
+});
+
+/* LISTE ADMIN : ARTICLES ACTIFS ET RETIRÉS */
+app.get("/api/admin/shop/all-items", auth, (req, res) => {
+  if (req.user.username !== "chilladmin") {
+    return res.status(403).json({
+      error: "Réservé au propriétaire."
+    });
+  }
+
+  const items = Object.entries(SHOP_ITEMS).map(([id, item]) => ({
+    id,
+    name: item.name,
+    price: item.price,
+    enabled: isShopItemEnabled(id),
+    discount: getItemDiscount(id)
+  }));
 
   res.json(items);
 });

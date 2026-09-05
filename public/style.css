@@ -360,3 +360,37 @@ aside button {
   display: none;
 }
 
+
+
+/* 📢 ANNONCES ADMIN — CADRE DORÉ */
+.admin-announcement {
+  border: 2px solid #d4af37 !important;
+  border-radius: 12px;
+  padding: 12px !important;
+  margin: 10px 0 !important;
+  background:
+    linear-gradient(
+      135deg,
+      rgba(255, 215, 0, 0.10),
+      rgba(212, 175, 55, 0.04)
+    );
+  box-shadow:
+    0 0 8px rgba(255, 215, 0, 0.35),
+    inset 0 0 12px rgba(255, 215, 0, 0.06);
+}
+
+.admin-announcement strong {
+  color: #ffd700;
+  font-weight: 900;
+  text-shadow:
+    0 0 4px #ffd700,
+    0 0 10px rgba(255, 215, 0, 0.8);
+}
+
+.admin-announcement .colored-message-text {
+  color: #ffd700 !important;
+  font-weight: 800;
+  text-shadow:
+    0 0 3px #ffd700,
+    0 0 8px rgba(255, 215, 0, 0.75);
+}

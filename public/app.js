@@ -859,6 +859,107 @@ async function showAdmin() {
 
   await loadAdminUsers();
 
+  /* 🧰 GESTION DES ARTICLES DE LA BOUTIQUE */
+  if (me.username === "chilladmin") {
+    const shopItemsBox = document.createElement("div");
+    shopItemsBox.className = "card";
+
+    shopItemsBox.innerHTML = `
+      <h2>🧰 Gérer les articles de la boutique</h2>
+      <p>
+        Retire un article pour le cacher de la boutique.
+        Sa réduction sera supprimée automatiquement.
+      </p>
+
+      <select id="shopItemStatusSelect" style="width:100%;margin-bottom:10px;">
+        <option value="">-- Choisir un article --</option>
+      </select>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button id="disableShopItemButton" class="danger">
+          🚫 Retirer de la boutique
+        </button>
+
+        <button id="enableShopItemButton">
+          ✅ Réactiver au prix normal
+        </button>
+      </div>
+
+      <p id="shopItemStatusMessage"></p>
+    `;
+
+    document.getElementById("adminUsers").appendChild(shopItemsBox);
+
+    const statusSelect =
+      document.getElementById("shopItemStatusSelect");
+
+    const statusMessage =
+      document.getElementById("shopItemStatusMessage");
+
+    async function loadShopItemStatuses() {
+      try {
+        const items = await api("/api/admin/shop/all-items");
+
+        statusSelect.innerHTML =
+          '<option value="">-- Choisir un article --</option>';
+
+        items.forEach(item => {
+          const option = document.createElement("option");
+
+          option.value = item.id;
+          option.textContent =
+            `${item.enabled ? "🟢" : "🔴"} ${item.name} — 💎 ` +
+            Number(item.price || 0).toLocaleString("fr-FR") +
+            (item.enabled
+              ? " — Disponible"
+              : " — Retiré");
+
+          statusSelect.appendChild(option);
+        });
+      } catch (error) {
+        statusMessage.textContent =
+          "❌ " + error.message;
+      }
+    }
+
+    async function changeShopItemStatus(enabled) {
+      const itemId = statusSelect.value;
+
+      if (!itemId) {
+        alert("❌ Choisis un article.");
+        return;
+      }
+
+      try {
+        const result = await api(
+          "/api/admin/shop/item-status",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              itemId,
+              enabled
+            })
+          }
+        );
+
+        statusMessage.textContent = "✅ " + result.message;
+
+        await loadShopItemStatuses();
+      } catch (error) {
+        statusMessage.textContent =
+          "❌ " + error.message;
+      }
+    }
+
+    document.getElementById("disableShopItemButton").onclick =
+      () => changeShopItemStatus(false);
+
+    document.getElementById("enableShopItemButton").onclick =
+      () => changeShopItemStatus(true);
+
+    await loadShopItemStatuses();
+  }
+
   /* 🛍️ SOLDES BOUTIQUE RESTAURÉES */
   if (me.role === "owner" || me.username === "chilladmin") {
     const discountBox = document.createElement("div");
