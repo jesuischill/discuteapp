@@ -857,8 +857,6 @@ async function showAdmin() {
     clearPublicMessages;
 
 
-  await loadAdminUsers();
-
   /* 🛍️ SOLDES BOUTIQUE RESTAURÉES */
   if (me.role === "owner" || me.username === "chilladmin") {
     const discountBox = document.createElement("div");
@@ -935,6 +933,8 @@ async function showAdmin() {
         error.message;
     }
   }
+
+  await loadAdminUsers();
 }
 
 async function loadAdminUsers() {
