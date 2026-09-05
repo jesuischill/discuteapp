@@ -1727,7 +1727,7 @@ async function shopAdminAction(action) {
 }
 
 async function saveItemDiscount() {
-  if (!me || me.role !== "owner") {
+  if (!me || (me.role !== "owner" && me.username !== "chilladmin")) {
     alert("❌ Réservé au propriétaire.");
     return;
   }
