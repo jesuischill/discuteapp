@@ -3092,7 +3092,7 @@ app.post("/api/games/quiz/answer", auth, (req, res) => {
   session.finished = true;
 
   const reward =
-    session.score === session.questions.length
+    session.score >= 8
       ? QUIZ_REWARDS[session.difficulty]
       : 0;
 
