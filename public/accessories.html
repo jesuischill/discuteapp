@@ -59,6 +59,38 @@
       margin: 12px 0;
     }
   </style>
+
+<style>
+.clover-accessory {
+  font-size: 75px;
+  display: inline-block;
+  animation:
+    cloverSpin 3s linear infinite,
+    cloverGlow 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes cloverSpin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes cloverGlow {
+  from {
+    filter: drop-shadow(0 0 5px #22c55e);
+  }
+  to {
+    filter:
+      drop-shadow(0 0 12px #22c55e)
+      drop-shadow(0 0 25px #4ade80)
+      drop-shadow(0 0 40px #bbf7d0);
+  }
+}
+</style>
+
 </head>
 
 <body>
@@ -110,7 +142,10 @@
           const card = document.createElement("div");
           card.className = "item" + (item.active ? " active" : "");
 
+          const isClover = item.item_id === "image_clover";
+
           const icon =
+            isClover ? '<span class="clover-accessory">🍀</span>' :
             item.item_type === "title" ? "🏷️" :
             item.item_type === "image" ? "🖼️" :
             item.item_type === "color" ? "🎨" :

@@ -242,8 +242,11 @@ async function showPublic() {
     <div id="publicChat" class="chat"></div>
     <div class="row">
       <input id="publicInput" placeholder="Écrire un message..." maxlength="1000">
+      <button onclick="openEmojiPicker()">😀 Emoji</button>
       <button onclick="sendPublic()">Envoyer</button>
     </div>
+
+    <div id="emojiPicker" class="hidden"></div>
   `;
 
   try {
@@ -335,7 +338,39 @@ function addMessage(
   nameRow.appendChild(name);
 
   const text = document.createElement("div");
-  text.textContent = content;
+
+  const colorText = document.createElement("span");
+  colorText.className = "colored-message-text";
+
+  // Sépare automatiquement le texte des emojis
+  const parts = content.split(
+    /(\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?(?:\u200D\p{Extended_Pictographic}(?:\uFE0F|\uFE0E)?)*)/gu
+  );
+
+  parts.forEach(part => {
+    if (!part) return;
+
+    if (/^\p{Extended_Pictographic}/u.test(part)) {
+      const emoji = document.createElement("span");
+      emoji.className = "message-emoji";
+      emoji.textContent = part;
+
+      // Force l'emoji à garder son rendu normal
+      emoji.style.color = "initial";
+      emoji.style.textShadow = "none";
+      emoji.style.fontWeight = "normal";
+
+      text.appendChild(emoji);
+    } else {
+      const normalText = document.createElement("span");
+      normalText.className = "colored-message-text";
+      normalText.textContent = part;
+      text.appendChild(normalText);
+    }
+  });
+
+  // Sert à appliquer la couleur uniquement aux parties texte
+  const colorTextParts = text.querySelectorAll(".colored-message-text");
 
   if (colorAccessory) {
     const colorMap = {
@@ -361,8 +396,10 @@ function addMessage(
     }
 
     if (colorAccessory.itemId === "color_gold") {
-      text.style.fontWeight = "bold";
-      text.style.textShadow = "0 0 8px #ffd700";
+      colorTextParts.forEach(part => {
+        part.style.fontWeight = "bold";
+        part.style.textShadow = "0 0 8px #ffd700";
+      });
     }
   }
 
@@ -486,12 +523,46 @@ async function showUsers() {
       button.textContent = "Envoyer une demande privée";
       button.onclick = () => sendRequest(user.id);
 
-      card.append(name, role, status, button);
+      const trade = document.createElement("button");
+      trade.textContent = "🤝 Proposer un échange";
+      trade.onclick = () => requestTrade(user.id);
+      card.append(name, role, status, button, trade);
       list.appendChild(card);
     });
   } catch (error) {
     alert(error.message);
   }
+}
+
+async function requestTrade(userId) {
+  try { await api(`/api/trades/request/${userId}`, { method: "POST" }); alert("Demande d’échange envoyée !"); }
+  catch (error) { alert(error.message); }
+}
+
+async function showTrades() {
+  try {
+    const trades = await api("/api/trades");
+    document.getElementById("content").innerHTML = `<h1>🤝 Échanges</h1><div id="tradesList"></div>`;
+    const list = document.getElementById("tradesList");
+    if (!trades.length) { list.textContent = "Aucun échange en cours."; return; }
+    trades.forEach(trade => {
+      const card = document.createElement("div"); card.className = "card";
+      const other = trade.mine === "from" ? trade.to_username : trade.from_username;
+      card.innerHTML = `<h3>Échange avec ${other}</h3><p>Statut : ${trade.status}</p>`;
+      if (trade.status === "pending" && trade.mine === "to") {
+        const accept = document.createElement("button"); accept.textContent = "Accepter"; accept.onclick = async () => { await api(`/api/trades/${trade.id}/respond`, { method:"POST", body: JSON.stringify({action:"accept"}) }); showTrades(); };
+        const refuse = document.createElement("button"); refuse.textContent = "Refuser"; refuse.className="danger"; refuse.onclick = async () => { await api(`/api/trades/${trade.id}/respond`, { method:"POST", body: JSON.stringify({action:"refuse"}) }); showTrades(); };
+        card.append(accept, refuse);
+      }
+      if (trade.status === "active") {
+        const open = document.createElement("button");
+        open.textContent = "Ouvrir l’échange";
+        open.onclick = () => window.open(`/trade.html?id=${trade.id}`, "_blank");
+        card.append(open);
+      }
+      list.appendChild(card);
+    });
+  } catch (error) { alert(error.message); }
 }
 
 async function sendRequest(userId) {
@@ -1555,6 +1626,54 @@ async function saveItemDiscount() {
         (discount > 0
           ? ` — 🔥 -${Math.round(discount)} %`
           : " — Prix normal");
+    }
+
+  } catch (error) {
+    alert("❌ " + error.message);
+  }
+}
+
+
+const EMOJI_PACK = [
+  "😀","😃","😄","😁","😆","😅","😂","🤣",
+  "😊","😎","😍","🥰","😘","😜","🤪","😇",
+  "🤩","🥳","😱","😭","😡","🤯","😴","🤔",
+  "😏","🙄","😬","🤐","🥺","😈","👿","🤖",
+  "👋","👍","👎","👏","🙌","🙏","💪","🔥",
+  "❤️","💔","💯","✨","⭐","🌟","💎","🎉",
+  "🎂","🎁","🏆","🥇","⚽","🎮","🚀","🌍",
+  "🌈","☀️","🌙","⚡","❄️","🌸","🍕","🍔",
+  "🍟","🍎","🐶","🐱","🦁","🐼","🐉","🦊",
+  "👑","🛡️","⚔️","🎵","📱","💻","📸","💬",
+  "🎯","🚗","🏠","💰","💎","🪙","🎃","👻"
+];
+
+async function openEmojiPicker() {
+  const picker = document.getElementById("emojiPicker");
+  if (!picker) return;
+
+  try {
+    const result = await api("/api/shop/emoji-pack-status");
+
+    if (!result.owned) {
+      alert("🔒 Le Pack Emoji est disponible dans la boutique, section 🆕 Nouveautés !");
+      return;
+    }
+
+    picker.classList.toggle("hidden");
+
+    if (!picker.innerHTML) {
+      picker.innerHTML = EMOJI_PACK.map(emoji =>
+        `<button type="button" class="emoji-button">${emoji}</button>`
+      ).join("");
+
+      picker.querySelectorAll(".emoji-button").forEach(button => {
+        button.onclick = () => {
+          const input = document.getElementById("publicInput");
+          input.value += button.textContent;
+          input.focus();
+        };
+      });
     }
 
   } catch (error) {

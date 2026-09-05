@@ -66,6 +66,7 @@ CREATE TABLE IF NOT EXISTS public_messages_archive (
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 function createToken(user) {
   return jwt.sign(
@@ -262,6 +263,33 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS trades (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    from_user_id INTEGER NOT NULL,
+    to_user_id INTEGER NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    from_gems INTEGER NOT NULL DEFAULT 0,
+    to_gems INTEGER NOT NULL DEFAULT 0,
+    from_items TEXT NOT NULL DEFAULT '[]',
+    to_items TEXT NOT NULL DEFAULT '[]',
+    from_confirmed INTEGER NOT NULL DEFAULT 0,
+    to_confirmed INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+/* ANNUAIRE : publications */
+db.exec(`
+  CREATE TABLE IF NOT EXISTS directory_posts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    content TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 /* SOLDES GLOBALES DE LA BOUTIQUE */
 db.exec(`
   CREATE TABLE IF NOT EXISTS shop_settings (
@@ -313,6 +341,9 @@ function getDiscountedItemPrice(itemId, price) {
   return Math.max(0, Math.round(price * (100 - discount) / 100));
 }
 
+
+
+
 const SHOP_ITEMS = {
   title_bg:       { price: 5000,     type: "title", name: "BG" },
   title_chill:    { price: 1000,     type: "title", name: "Chill" },
@@ -338,7 +369,8 @@ const SHOP_ITEMS = {
   color_gray:     { price: 10000,    type: "color", name: "Gris" },
   color_gold:     { price: 50000,    type: "color", name: "Doré brillant" },
 
-  admin_panel:    { price: 10000000, type: "admin_panel", name: "Panneau Admin" }
+  admin_panel:    { price: 10000000, type: "admin_panel", name: "Panneau Admin" },
+  emoji_pack:     { price: 1000000, type: "emoji_pack", name: "😀 Pack Emoji — 80+ emojis" }
 };
 
 
@@ -532,6 +564,21 @@ app.post("/api/admin/shop/item-discount", auth, (req, res) => {
   });
 });
 
+
+/* PACK EMOJI : VÉRIFIER LA POSSESSION */
+app.get("/api/shop/emoji-pack-status", auth, (req, res) => {
+  const purchase = db.prepare(`
+    SELECT id
+    FROM purchases
+    WHERE user_id = ?
+      AND item_id = 'emoji_pack'
+  `).get(req.user.id);
+
+  res.json({
+    owned: !!purchase
+  });
+});
+
 /* CLASSEMENT : utilisateurs avec le plus de gemmes */
 app.get("/api/rankings/gems", auth, (req, res) => {
   const users = db.prepare(`
@@ -634,6 +681,82 @@ app.get("/api/my-gems", auth, (req, res) => {
   res.json({
     gems: user ? (user.gems || 0) : 0
   });
+});
+
+/* ÉCHANGES */
+function tradeForUser(trade, userId) {
+  const mine = trade.from_user_id === userId ? "from" : "to";
+  const other = mine === "from" ? "to" : "from";
+  return { ...trade, mine, other, myGems: trade[`${mine}_gems`], myItems: JSON.parse(trade[`${mine}_items`]), myConfirmed: Boolean(trade[`${mine}_confirmed`]), otherConfirmed: Boolean(trade[`${other}_confirmed`]) };
+}
+
+app.post("/api/trades/request/:userId", auth, (req, res) => {
+  const toUserId = Number(req.params.userId);
+  if (!toUserId || toUserId === req.user.id || !getDbUser(toUserId)) return res.status(400).json({ error: "Utilisateur invalide." });
+  const trade = db.prepare("INSERT INTO trades (from_user_id, to_user_id) VALUES (?, ?)").run(req.user.id, toUserId);
+  io.to(`user-${toUserId}`).emit("trade_updated");
+  res.json({ id: trade.lastInsertRowid });
+});
+
+app.get("/api/trades", auth, (req, res) => {
+  const trades = db.prepare("SELECT t.*, a.username AS from_username, b.username AS to_username FROM trades t JOIN users a ON a.id=t.from_user_id JOIN users b ON b.id=t.to_user_id WHERE (t.from_user_id=? OR t.to_user_id=?) AND t.status IN ('pending','active') ORDER BY t.id DESC").all(req.user.id, req.user.id);
+  res.json(trades.map(trade => tradeForUser(trade, req.user.id)));
+});
+
+app.post("/api/trades/:id/respond", auth, (req, res) => {
+  const trade = db.prepare("SELECT * FROM trades WHERE id=? AND to_user_id=? AND status='pending'").get(Number(req.params.id), req.user.id);
+  if (!trade) return res.status(404).json({ error: "Demande introuvable." });
+  const status = req.body.action === "accept" ? "active" : "refused";
+  db.prepare("UPDATE trades SET status=? WHERE id=?").run(status, trade.id);
+  io.to(`user-${trade.from_user_id}`).emit("trade_updated");
+  res.json({ status });
+});
+
+app.get("/api/trades/:id", auth, (req, res) => {
+  const trade = db.prepare("SELECT t.*, a.username AS from_username, b.username AS to_username FROM trades t JOIN users a ON a.id=t.from_user_id JOIN users b ON b.id=t.to_user_id WHERE t.id=? AND (t.from_user_id=? OR t.to_user_id=?)").get(Number(req.params.id), req.user.id, req.user.id);
+  if (!trade) return res.status(404).json({ error: "Échange introuvable." });
+  res.json(tradeForUser(trade, req.user.id));
+});
+
+app.put("/api/trades/:id/offer", auth, (req, res) => {
+  const trade = db.prepare("SELECT * FROM trades WHERE id=? AND (from_user_id=? OR to_user_id=?) AND status='active'").get(Number(req.params.id), req.user.id, req.user.id);
+  const gems = Math.max(0, Math.floor(Number(req.body.gems) || 0));
+  const items = [...new Set((Array.isArray(req.body.itemIds) ? req.body.itemIds : []).map(Number).filter(Number.isInteger))];
+  if (!trade) return res.status(404).json({ error: "Échange indisponible." });
+  const owned = db.prepare(`SELECT id FROM purchases WHERE user_id=? AND id IN (${items.map(() => "?").join(",") || "NULL"})`).all(req.user.id, ...items);
+  if (owned.length !== items.length) return res.status(400).json({ error: "Accessoire invalide." });
+  const side = trade.from_user_id === req.user.id ? "from" : "to";
+  db.prepare(`UPDATE trades SET ${side}_gems=?, ${side}_items=?, from_confirmed=0, to_confirmed=0 WHERE id=?`).run(gems, JSON.stringify(items), trade.id);
+  io.to(`user-${trade.from_user_id}`).emit("trade_updated"); io.to(`user-${trade.to_user_id}`).emit("trade_updated");
+  res.json({ success: true });
+});
+
+app.post("/api/trades/:id/confirm", auth, (req, res) => {
+  const trade = db.prepare("SELECT * FROM trades WHERE id=? AND (from_user_id=? OR to_user_id=?) AND status='active'").get(Number(req.params.id), req.user.id, req.user.id);
+  if (!trade) return res.status(404).json({ error: "Échange indisponible." });
+  const side = trade.from_user_id === req.user.id ? "from" : "to";
+  db.prepare(`UPDATE trades SET ${side}_confirmed=1 WHERE id=?`).run(trade.id);
+  const ready = db.prepare("SELECT * FROM trades WHERE id=?").get(trade.id);
+  if (!(ready.from_confirmed && ready.to_confirmed)) return res.json({ completed: false });
+  try {
+    db.transaction(() => {
+      const from = db.prepare("SELECT gems FROM users WHERE id=?").get(ready.from_user_id);
+      const to = db.prepare("SELECT gems FROM users WHERE id=?").get(ready.to_user_id);
+      if (from.gems < ready.from_gems || to.gems < ready.to_gems) throw new Error("Une personne n'a plus assez de gemmes.");
+      for (const [ids, owner, recipient] of [[JSON.parse(ready.from_items), ready.from_user_id, ready.to_user_id], [JSON.parse(ready.to_items), ready.to_user_id, ready.from_user_id]]) {
+        for (const id of ids) {
+          const item = db.prepare("SELECT item_id FROM purchases WHERE id=? AND user_id=?").get(id, owner);
+          if (!item || db.prepare("SELECT id FROM purchases WHERE user_id=? AND item_id=?").get(recipient, item.item_id)) throw new Error("Un accessoire ne peut plus être échangé.");
+          db.prepare("UPDATE purchases SET user_id=?, active=0 WHERE id=?").run(recipient, id);
+        }
+      }
+      db.prepare("UPDATE users SET gems=gems-?+? WHERE id=?").run(ready.from_gems, ready.to_gems, ready.from_user_id);
+      db.prepare("UPDATE users SET gems=gems-?+? WHERE id=?").run(ready.to_gems, ready.from_gems, ready.to_user_id);
+      db.prepare("UPDATE trades SET status='completed' WHERE id=?").run(ready.id);
+    })();
+  } catch (error) { return res.status(400).json({ error: error.message }); }
+  io.to(`user-${ready.from_user_id}`).emit("trade_updated"); io.to(`user-${ready.to_user_id}`).emit("trade_updated");
+  res.json({ completed: true });
 });
 
 
@@ -760,6 +883,7 @@ app.post("/api/games/reward", auth, (req, res) => {
     gems: updated.gems
   });
 });
+
 
 /* CLUBS */
 
@@ -981,6 +1105,19 @@ app.post("/api/clubs/:id/comments", auth, (req, res) => {
   res.status(201).json({ success: true });
 });
 
+
+/* COLONNES FICHIERS ANNUAIRE */
+try {
+  db.exec("ALTER TABLE directory_posts ADD COLUMN file_name TEXT");
+} catch (error) {
+  // La colonne existe peut-être déjà
+}
+
+try {
+  db.exec("ALTER TABLE directory_posts ADD COLUMN file_path TEXT");
+} catch (error) {
+  // La colonne existe peut-être déjà
+}
 
 /* CHAT PUBLIC */
 app.get("/api/public-messages", auth, (req, res) => {
