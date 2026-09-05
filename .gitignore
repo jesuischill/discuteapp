@@ -1,1 +1,9 @@
 .env
+
+# Secrets et fichiers locaux
+.env
+*.db
+node_modules/
+*.bak
+*.backup
+backups-soldes/

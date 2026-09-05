@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🛒 Boutique - DiscuteApp</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      background: #f4f4f4;
+      color: #222;
+    }
+
+    header {
+      text-align: center;
+      padding: 30px 20px;
+    }
+
+    #gemsBalance {
+      font-size: 22px;
+      font-weight: bold;
+    }
+
+    .shop-section {
+      max-width: 950px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+
+    .shop-section h2 {
+      text-align: center;
+      font-size: 28px;
+    }
+
+    .items {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+
+    .item {
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      text-align: center;
+      box-shadow: 0 5px 20px rgba(0, 0, 0, 0.12);
+    }
+
+    .title-preview {
+      font-size: 25px;
+      font-weight: bold;
+      margin: 15px 0;
+    }
+
+    .admin-title {
+      color: #b8860b;
+    }
+
+    .price {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    button {
+      border: none;
+      padding: 11px 18px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    .custom-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .custom-options input {
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    input[type="color"] {
+      width: 100%;
+      height: 45px;
+      cursor: pointer;
+    }
+  
+    /* ===== FOND GEMMES BOUTIQUE ===== */
+    body {
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "💎 ✨ 💎 💠 💎 ✨ 💎 💠 💎 ✨ 💎 💠 💎 ✨ 💎 💠 💎 ✨ 💎 💠 💎 ✨ 💎 💠 💎 ✨ 💎 💠 💎";
+      position: fixed;
+      inset: 0;
+      z-index: -1;
+      font-size: 55px;
+      line-height: 1.8;
+      letter-spacing: 25px;
+      word-spacing: 30px;
+      opacity: 0.18;
+      overflow: hidden;
+      transform: rotate(-8deg) scale(1.15);
+      pointer-events: none;
+    }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: -2;
+      background:
+        radial-gradient(circle at top left, #d9f5ff, transparent 45%),
+        radial-gradient(circle at bottom right, #b8e6ff, transparent 45%),
+        linear-gradient(135deg, #eaf9ff, #d2f1ff, #eefaff);
+    }
+
+  
+    /* ===== CITROUILLE HALLOWEEN ANIMÉE ===== */
+    .halloween-pumpkin {
+      width: 110px;
+      height: 85px;
+      margin: 15px auto;
+      background: #ff7b00;
+      border-radius: 48% 48% 42% 42%;
+      position: relative;
+      border: 4px solid #b84d00;
+      box-shadow: inset -12px 0 0 rgba(0,0,0,.12);
+    }
+
+    .halloween-pumpkin::before {
+      content: "🌿";
+      position: absolute;
+      top: -27px;
+      left: 40px;
+      font-size: 30px;
+    }
+
+    .pumpkin-eyes {
+      position: absolute;
+      top: 22px;
+      width: 100%;
+      text-align: center;
+      font-size: 20px;
+      color: #1a1025;
+      letter-spacing: 10px;
+    }
+
+    .pumpkin-mouth {
+      position: absolute;
+      left: 28px;
+      bottom: 15px;
+      width: 50px;
+      height: 8px;
+      background: #1a1025;
+      border-radius: 0 0 50% 50%;
+      animation: pumpkinMouth 0.8s ease-in-out infinite alternate;
+      transform-origin: center top;
+    }
+
+    @keyframes pumpkinMouth {
+      from {
+        height: 8px;
+        border-radius: 0 0 50% 50%;
+      }
+      to {
+        height: 28px;
+        border-radius: 0 0 45% 45%;
+      }
+    }
+
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>🛒 Boutique DiscuteApp</h1>
+    <p id="gemsBalance">💎 Chargement de tes gemmes...</p>
+    <p>Personnalise ton profil avec tes gemmes !</p>
+  </header>
+
+  <section class="shop-section">
+    <h2>🆕 Nouveautés</h2>
+
+    <p style="text-align:center;">
+      🔥 Découvre les nouveaux objets disponibles dans la boutique !
+    </p>
+
+    <div class="items">
+      <div class="item">
+        <div style="font-size:45px;">😀🎉🔥💎👑</div>
+
+        <h3>🆕 Pack Emoji</h3>
+
+        <p>
+          ⭐ NOUVEAUTÉ ⭐
+          <br>
+          Débloque plus de 80 emojis à utiliser dans le chat public !
+        </p>
+
+        <p style="font-weight:bold;">
+          😀 😂 😎 🔥 ❤️ 🎮 🚀 👑 💎
+        </p>
+
+        <p class="price">💎 1 000 000 gemmes</p>
+
+        <button onclick="buyItem('emoji_pack')">
+          🔒 Acheter le Pack Emoji
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <section class="shop-section">
+    <h2>🏷️ Titres</h2>
+
+    <div class="items">
+
+      <div class="item">
+        <h3>BG</h3>
+        <div class="title-preview">BG</div>
+        <p class="price">💎 5 000 gemmes</p>
+        <button onclick="buyItem('title_bg')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <h3>Chill</h3>
+        <div class="title-preview">Chill</div>
+        <p class="price">💎 1 000 gemmes</p>
+        <button onclick="buyItem('title_chill')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <h3>👑 Admin</h3>
+        <div class="title-preview admin-title">👑 Admin</div>
+        <p class="price">💎 50 000 gemmes</p>
+        <button onclick="buyItem('title_admin')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <h3>✍️ Titre personnalisé</h3>
+
+        <div class="custom-options">
+          <input
+            id="customTitle"
+            type="text"
+            maxlength="30"
+            placeholder="Écris ton titre"
+          >
+
+          <input
+            id="customTitleColor"
+            type="color"
+            value="#000000"
+          >
+        </div>
+
+        <p class="price">💎 30 000 gemmes</p>
+        <button onclick="buyCustomTitle()">Acheter mon titre</button>
+      </div>
+
+    </div>
+  </section>
+
+
+  <section class="shop-section">
+    
+    <div class="card" style="
+      border: 3px solid #d4af37;
+      box-shadow: 0 0 18px rgba(212,175,55,.8);
+      background: linear-gradient(135deg, #fff8e1, #ffe0e0);
+    ">
+      <h3>🎅 Christmas</h3>
+
+      <p style="font-size: 18px; font-weight: bold;">
+        🍬 Titre exclusif couleur sucre d'orge
+      </p>
+
+      <p style="
+        display: inline-block;
+        background: #d4af37;
+        color: white;
+        padding: 7px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+      ">
+        ⭐ CERTIFIÉ EXCLUSIF ⭐
+      </p>
+
+      <p>
+        🎄 Un titre spécial avec un chapeau de Noël et une certification
+        exclusive visible directement dans le chat.
+      </p>
+
+      <p class="price">💎 50 000 gemmes</p>
+
+      <button onclick="buyItem('title_christmas')">
+        🎁 Acheter l'exclusif
+      </button>
+    </div>
+
+    <h2>🖼️ Images à côté du pseudo</h2>
+
+    <div class="items">
+
+      <div class="item">
+        <div class="icon">🍥</div>
+        <h3>Ninja anime</h3>
+        <p>Une image de ninja style anime à côté de ton pseudo.</p>
+        <p class="price">💎 1 000 gemmes</p>
+        <button onclick="buyItem('image_ninja')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="icon">🌀</div>
+        <h3>Magicien aux yeux bleus</h3>
+        <p>Une image de personnage style anime à côté de ton pseudo.</p>
+        <p class="price">💎 5 000 gemmes</p>
+        <button onclick="buyItem('image_gojo')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="icon">👹</div>
+        <h3>Monstre</h3>
+        <p>Choisis ton monstre :</p>
+
+        <select id="monsterChoice">
+          <option value="">-- Choisir --</option>
+          <option value="magma">🌋 Monstre magma</option>
+          <option value="ice">❄️ Monstre glacial</option>
+        </select>
+
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyMonster()">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="icon">🖼️</div>
+        <h3>Image personnalisée</h3>
+        <p>Choisis d'abord une photo et un fond.</p>
+
+        <div class="custom-options">
+          <label>Photo :</label>
+          <select id="customPhoto">
+            <option value="">-- Choisir une photo --</option>
+          </select>
+
+          <label>Fond :</label>
+          <select id="customBackground">
+            <option value="">-- Choisir un fond --</option>
+            <option value="gold">✨ Doré</option>
+            <option value="blue">🌊 Bleu</option>
+            <option value="red">🔥 Rouge</option>
+            <option value="purple">💜 Violet</option>
+            <option value="green">🌿 Vert</option>
+            <option value="space">🌌 Espace</option>
+          </select>
+        </div>
+
+        <p class="price">💎 30 000 gemmes</p>
+        <button id="customBuyButton" disabled onclick="buyCustomImage()">
+          🔒 Choisis une photo et un fond
+        </button>
+      </div>
+
+      <div class="item">
+        <div class="icon">🎴</div>
+        <h3>Collection 50 images</h3>
+        <p>Débloque une grande collection d'environ 50 images.</p>
+        <p class="price">💎 50 000 gemmes</p>
+        <button onclick="buyItem('image_collection')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="icon">👑</div>
+        <h3>Image Royale</h3>
+        <p>Couronne avec un fond doré animé.</p>
+        <p class="price">💎 100 000 gemmes</p>
+        <button onclick="buyItem('image_royal')">Acheter</button>
+      </div>
+
+    </div>
+  </section>
+
+
+  <section class="shop-section">
+    
+    <div class="card" style="
+      border: 3px solid #ff7b00;
+      box-shadow: 0 0 20px rgba(255,123,0,.8);
+      background: linear-gradient(135deg, #1a1025, #3b1d0a);
+      color: white;
+    ">
+      <h3>🎃 Halloween</h3>
+
+      <div class="halloween-pumpkin">
+        <div class="pumpkin-eyes">▲ ▲</div>
+        <div class="pumpkin-mouth"></div>
+      </div>
+
+      <p>👻 Image exclusive Halloween animée</p>
+
+      <p style="
+        display:inline-block;
+        background:#d4af37;
+        color:white;
+        padding:7px 12px;
+        border-radius:20px;
+        font-weight:bold;
+      ">⭐ CERTIFIÉ EXCLUSIF</p>
+
+      <p class="price">💎 50 000 gemmes</p>
+
+      <button onclick="buyItem('image_halloween')">
+        🎁 Acheter l'exclusif
+      </button>
+    </div>
+
+    <h2>🎨 Couleur de ton texte</h2>
+    <p style="text-align:center;">
+      Achète une couleur pour personnaliser tes messages dans le chat.
+    </p>
+
+    <div class="items">
+
+      <div class="item">
+        <div class="title-preview" style="color: red;">Bonjour, je discute !</div>
+        <h3>🔴 Rouge</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_red')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: blue;">Bonjour, je discute !</div>
+        <h3>🔵 Bleu</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_blue')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: green;">Bonjour, je discute !</div>
+        <h3>🟢 Vert</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_green')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: purple;">Bonjour, je discute !</div>
+        <h3>🟣 Violet</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_purple')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: hotpink;">Bonjour, je discute !</div>
+        <h3>🩷 Rose</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_pink')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: orange;">Bonjour, je discute !</div>
+        <h3>🟠 Orange</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_orange')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: cyan;">Bonjour, je discute !</div>
+        <h3>🔵 Cyan</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_cyan')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: brown;">Bonjour, je discute !</div>
+        <h3>🟤 Marron</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_brown')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: black;">Bonjour, je discute !</div>
+        <h3>⚫ Noir</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_black')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: #777;">Bonjour, je discute !</div>
+        <h3>⚪ Gris</h3>
+        <p class="price">💎 10 000 gemmes</p>
+        <button onclick="buyItem('color_gray')">Acheter</button>
+      </div>
+
+      <div class="item">
+        <div class="title-preview" style="color: #b8860b; text-shadow: 0 0 8px #ffd700;">
+          ✨ Bonjour, je discute ! ✨
+        </div>
+        <h3>✨ Doré brillant</h3>
+        <p>Une couleur spéciale avec un effet lumineux.</p>
+        <p class="price">💎 50 000 gemmes</p>
+        <button onclick="buyItem('color_gold')">Acheter</button>
+      </div>
+
+
+      <div class="item gold-wave-exclusive">
+        <div class="exclusive-frame">
+          <div class="exclusive-label">⭐ CERTIFIÉ EXCLUSIF ⭐</div>
+
+          <div class="gold-wave-preview">
+            ✨ Bonjour, je discute ! ✨
+          </div>
+
+          <h3>✨ Or brillant ondulant</h3>
+
+          <p>
+            Une couleur dorée brillante avec un effet lumineux
+            qui bouge continuellement en ondulation.
+          </p>
+
+          <p class="price">💎 70 000 gemmes</p>
+
+          <button onclick="buyItem('color_gold_wave')">
+            💎 Acheter l'exclusif
+          </button>
+        </div>
+      </div>
+
+
+    </div>
+  </section>
+
+
+  <section class="shop-section">
+    <h2>🛡️ Panneau spécial</h2>
+
+    <div class="items">
+      <div class="item">
+        <div class="icon">🛡️</div>
+        <h3>Panneau Admin</h3>
+
+        <p>Débloque un panneau de modération limité avec :</p>
+
+        <p>🚫 Bannir un utilisateur</p>
+        <p>✅ Débannir un utilisateur</p>
+        <p>🗑️ Supprimer les messages du chat</p>
+        <p>👤 Supprimer les messages d'un pseudo</p>
+
+        <p>📢 Les actions sont affichées dans le chat public.</p>
+
+        <p style="color: red; font-weight: bold;">
+          ⚠️ Après avoir activé le Panneau Admin dans Accessoires,
+          recharge la page principale pour faire apparaître le bouton 🛡️ Admin 💎.
+        </p>
+
+        <p class="price">💎 10 000 000 gemmes</p>
+
+        <button id="buyAdminPanel" onclick="buyItem('admin_panel')">
+          🔒 Acheter le panneau Admin
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    
+
+    async function loadGems() {
+      try {
+        const response = await fetch("/api/my-gems", {
+          credentials: "include",
+            headers: {
+            
+          }
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur");
+        }
+
+        document.getElementById("gemsBalance").textContent =
+          `💎 Ton solde : ${data.gems || 0} gemmes`;
+
+      } catch (error) {
+        document.getElementById("gemsBalance").textContent =
+          "❌ Impossible de charger tes gemmes.";
+      }
+    }
+
+
+    // Environ 50 choix de photos
+    const customPhotos = [
+      "🐉 Dragon", "🐺 Loup", "🦊 Renard", "🐯 Tigre", "🦁 Lion",
+      "🐼 Panda", "🦅 Aigle", "🦈 Requin", "🐙 Poulpe", "🦋 Papillon",
+      "🤖 Robot", "👾 Alien", "🦾 Cyborg", "⚔️ Guerrier", "🧙 Mage",
+      "🧝 Elfe", "🧛 Vampire", "🧟 Zombie", "👻 Fantôme", "💀 Squelette",
+      "🐲 Dragon rouge", "🌋 Créature magma", "❄️ Créature glaciale",
+      "⚡ Créature électrique", "🌑 Créature de l'ombre",
+      "🌞 Héros solaire", "🌙 Héros lunaire", "🌌 Voyageur spatial",
+      "🪐 Explorateur", "🚀 Pilote spatial", "🎮 Gamer", "🏎️ Pilote",
+      "🥷 Ninja", "🛡️ Chevalier", "🏹 Archer", "🪄 Magicien",
+      "👑 Roi", "🦸 Héros", "🦹 Anti-héros", "🤠 Aventurier",
+      "🐸 Grenouille", "🐰 Lapin", "🐻 Ours", "🦄 Licorne",
+      "🦖 Dinosaure", "🦂 Scorpion", "🕷️ Araignée", "🦇 Chauve-souris",
+      "🌸 Esprit fleuri", "🔥 Esprit de feu"
+    ];
+
+    const customPhoto = document.getElementById("customPhoto");
+
+    customPhotos.forEach((photo, index) => {
+      const option = document.createElement("option");
+      option.value = `photo-${index + 1}`;
+      option.textContent = photo;
+      customPhoto.appendChild(option);
+    });
+
+    function updateCustomBuyButton() {
+      const photo = document.getElementById("customPhoto").value;
+      const background = document.getElementById("customBackground").value;
+      const button = document.getElementById("customBuyButton");
+
+      if (photo && background) {
+        button.disabled = false;
+        button.textContent = "💳 Payer 30 000 💎";
+      } else {
+        button.disabled = true;
+        button.textContent = "🔒 Choisis une photo et un fond";
+      }
+    }
+
+    customPhoto.addEventListener("change", updateCustomBuyButton);
+    document.getElementById("customBackground")
+      .addEventListener("change", updateCustomBuyButton);
+
+
+
+    async function buyItem(itemId, extraData = {}) {
+      try {
+        const response = await fetch("/api/shop/buy", {
+          method: "POST",
+          credentials: "include",
+            headers: {
+            "Content-Type": "application/json",
+            
+          },
+          body: JSON.stringify({
+            itemId,
+            data: extraData
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Achat impossible.");
+        }
+
+        document.getElementById("gemsBalance").textContent =
+          `💎 Ton solde : ${data.gems} gemmes`;
+
+        alert("✅ " + data.message);
+
+      } catch (error) {
+        alert("❌ " + error.message);
+      }
+    }
+
+    function buyCustomTitle() {
+      const title = document.getElementById("customTitle").value.trim();
+      const color = document.getElementById("customTitleColor").value;
+
+      if (!title) {
+        alert("❌ Écris d'abord ton titre.");
+        return;
+      }
+
+      buyItem("title_custom", { title, color });
+    }
+
+    function buyMonster() {
+      const monster = document.getElementById("monsterChoice").value;
+
+      if (!monster) {
+        alert("❌ Choisis un monstre.");
+        return;
+      }
+
+      buyItem("image_monster", { monster });
+    }
+
+    function buyCustomImage() {
+      const photo = document.getElementById("customPhoto").value;
+      const background = document.getElementById("customBackground").value;
+
+      if (!photo || !background) {
+        alert("❌ Choisis une photo et un fond.");
+        return;
+      }
+
+      buyItem("image_custom", { photo, background });
+    }
+
+
+    async function loadDiscounts() {
+      try {
+        const response = await fetch("/api/shop/items", {
+          credentials: "include",
+            headers: {
+            
+          },
+          cache: "no-store"
+        });
+
+        const items = await response.json();
+
+        if (!response.ok) {
+          throw new Error(items.error || "Erreur");
+        }
+
+        items.forEach(item => {
+          const button = document.querySelector(
+            `[onclick="buyItem('${item.id}')"]`
+          );
+
+          if (!button) return;
+
+          const card = button.closest(".item");
+          if (!card) return;
+
+          const price = card.querySelector(".price");
+          if (!price) return;
+
+          const discount = Number(item.discount || 0);
+
+          // Toujours repartir du prix normal affiché par le serveur
+          if (discount <= 0) {
+            price.innerHTML =
+              `💎 ${Number(item.price).toLocaleString("fr-FR")} gemmes`;
+            return;
+          }
+
+          // Calcul du nouveau prix directement ici
+          const oldPrice = Number(item.price);
+          const newPrice = Math.round(
+            oldPrice * (100 - discount) / 100
+          );
+
+          price.innerHTML = `
+            <span style="text-decoration:line-through; opacity:0.65;">
+              💎 ${oldPrice.toLocaleString("fr-FR")}
+            </span>
+            <br>
+            <strong style="font-size:18px;">
+              💎 ${newPrice.toLocaleString("fr-FR")} gemmes
+            </strong>
+            <br>
+            <span style="
+              display:inline-block;
+              margin-top:6px;
+              padding:4px 8px;
+              border-radius:8px;
+              font-weight:bold;
+              background:#ffcc00;
+            ">
+              🔥 -${discount} % SOLDES
+            </span>
+          `;
+        });
+
+      } catch (error) {
+        console.error("Impossible de charger les soldes :", error);
+      }
+    }
+
+    loadGems();
+    loadDiscounts();
+
+    setInterval(() => {
+      loadGems();
+      loadDiscounts();
+    }, 2000);
+    loadDiscounts();
+    loadDiscounts();
+  </script>
+
+
+</body>
+</html>

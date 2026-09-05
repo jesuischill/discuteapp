@@ -281,8 +281,7 @@ function addMessage(
   username,
   content,
   createdAt = null,
-  accessories = {},
-  isAnnouncement = false
+  accessories = {}
 ) {
   const container = document.getElementById(containerId);
   if (!container) return;
@@ -795,156 +794,158 @@ async function showAdmin() {
     return;
   }
 
-  document.getElementById("content").innerHTML = `
-    <h1>🛡️ Panneau Admin</h1>
-
-    <div class="card">
-      <h2>🔎 Rechercher un utilisateur</h2>
-      <input id="adminSearchUser" placeholder="Pseudo..." maxlength="30">
-      <button id="adminSearchButton">🔎 Rechercher</button>
-      <div id="adminUserResult"></div>
-    </div>
-
-    <div class="card">
-      <h2>📢 Annonce publique</h2>
-      <p>Cette annonce apparaîtra dans le chat avec un encadrement doré.</p>
-      <textarea
-        id="adminAnnouncement"
-        maxlength="1000"
-        placeholder="Écris ton annonce..."
-        style="width:100%;min-height:100px;resize:vertical;"
-      ></textarea>
-      <button id="adminAnnouncementButton">✨ Envoyer l'annonce</button>
-    </div>
-
-    <div class="card">
-      <h2>💎 Gestion des gemmes</h2>
-      <input id="gemsUsername" placeholder="Pseudo">
-      <input id="gemsAmount" type="number" min="1" placeholder="Nombre de gemmes">
-      <button id="adminAddGems">➕ Donner</button>
-      <button id="adminRemoveGems" class="danger">➖ Retirer</button>
-    </div>
-
-    <div class="card">
-      <h2>🗑️ Messages publics</h2>
-      <button id="adminClearMessages" class="danger">
-        🗑️ Supprimer tous les messages publics
-      </button>
-    </div>
-
-    <div class="card">
-      <h2>👥 Utilisateurs</h2>
-      <div id="adminUsers"></div>
-    </div>
-  `;
-
-  document.getElementById("adminSearchButton").onclick = searchAdminUser;
-
-  document.getElementById("adminSearchUser").addEventListener("keydown", e => {
-    if (e.key === "Enter") searchAdminUser();
-  });
-
-  document.getElementById("adminAnnouncementButton").onclick =
-    sendAdminAnnouncement;
-
-  document.getElementById("adminAddGems").onclick =
-    () => manageGems("add");
-
-  document.getElementById("adminRemoveGems").onclick =
-    () => manageGems("remove");
-
-  document.getElementById("adminClearMessages").onclick =
-    clearPublicMessages;
-
-
-  await loadAdminUsers();
-
-  /* 🛍️ SOLDES BOUTIQUE RESTAURÉES */
-  if (me.role === "owner" || me.username === "chilladmin") {
-    const discountBox = document.createElement("div");
-    discountBox.className = "card";
-
-    const discountTitle = document.createElement("h2");
-    discountTitle.textContent = "🛍️ Gérer les soldes de la boutique";
-
-    const discountInfo = document.createElement("p");
-    discountInfo.textContent =
-      "Choisis un article puis une réduction de 0 % à 100 %.";
-
-    const itemSelect = document.createElement("select");
-    itemSelect.id = "discountItemSelect";
-
-    const discountInput = document.createElement("input");
-    discountInput.id = "discountPercent";
-    discountInput.type = "number";
-    discountInput.min = "0";
-    discountInput.max = "100";
-    discountInput.value = "0";
-    discountInput.placeholder = "Réduction en %";
-
-    const saveDiscountButton = document.createElement("button");
-    saveDiscountButton.textContent = "💾 Appliquer la solde";
-    saveDiscountButton.onclick = saveItemDiscount;
-
-    const discountStatus = document.createElement("p");
-    discountStatus.id = "discountStatus";
-
-    discountBox.append(
-      discountTitle,
-      discountInfo,
-      itemSelect,
-      discountInput,
-      saveDiscountButton,
-      discountStatus
-    );
-
-    document.getElementById("adminUsers").appendChild(discountBox);
-
-    try {
-      const items = await api("/api/shop/items");
-
-      itemSelect.innerHTML =
-        '<option value="">-- Choisir un article --</option>';
-
-      items.forEach(item => {
-        const option = document.createElement("option");
-
-        option.value = item.id;
-        option.dataset.discount = item.discount || 0;
-
-        option.textContent =
-          `${item.name} — 💎 ${Number(item.price || 0).toLocaleString("fr-FR")}` +
-          (item.discount > 0
-            ? ` — 🔥 -${item.discount} %`
-            : " — Prix normal");
-
-        itemSelect.appendChild(option);
-      });
-
-      itemSelect.addEventListener("change", () => {
-        const option =
-          itemSelect.options[itemSelect.selectedIndex];
-
-        discountInput.value =
-          option.dataset.discount || 0;
-      });
-
-    } catch (error) {
-      discountStatus.textContent =
-        "❌ Impossible de charger les articles : " +
-        error.message;
-    }
-  }
-}
-
-async function loadAdminUsers() {
   try {
     const users = await api("/api/admin/users");
+
+    document.getElementById("content").innerHTML = `
+      <h1>🛡️ Panneau Admin</h1>
+      <div id="adminUsers"></div>
+    `;
+
     const container = document.getElementById("adminUsers");
 
-    if (!container) return;
+    const clearButton = document.createElement("button");
+    clearButton.textContent = "🗑️ Supprimer les messages publics";
+    clearButton.className = "danger";
+    clearButton.onclick = clearPublicMessages;
 
-    container.innerHTML = "";
+    container.appendChild(clearButton);
+
+    const deleteUserMessagesBox = document.createElement("div");
+    deleteUserMessagesBox.className = "card";
+
+    const deleteTitle = document.createElement("strong");
+    deleteTitle.textContent = "👤 Supprimer les messages d'un utilisateur";
+
+    const deleteInput = document.createElement("input");
+    deleteInput.id = "deleteMessagesUsername";
+    deleteInput.placeholder = "Entrer le pseudo";
+
+    const deleteButton = document.createElement("button");
+    deleteButton.textContent = "🗑️ Supprimer ses messages";
+    deleteButton.className = "danger";
+    deleteButton.onclick = deleteUserPublicMessages;
+
+    deleteUserMessagesBox.append(
+      deleteTitle,
+      deleteInput,
+      deleteButton
+    );
+
+    container.appendChild(deleteUserMessagesBox);
+
+    const gemsBox = document.createElement("div");
+    gemsBox.className = "card";
+
+    const gemsTitle = document.createElement("strong");
+    gemsTitle.textContent = "💎 Gérer les gemmes";
+
+    const gemsUser = document.createElement("input");
+    gemsUser.id = "gemsUsername";
+    gemsUser.placeholder = "Entrer le pseudo";
+
+    const gemsAmount = document.createElement("input");
+    gemsAmount.id = "gemsAmount";
+    gemsAmount.type = "number";
+    gemsAmount.min = "1";
+    gemsAmount.placeholder = "Nombre de gemmes";
+
+    const addGemsButton = document.createElement("button");
+    addGemsButton.textContent = "➕ Donner des gemmes";
+    addGemsButton.onclick = () => manageGems("add");
+
+    const removeGemsButton = document.createElement("button");
+    removeGemsButton.textContent = "➖ Retirer des gemmes";
+    removeGemsButton.className = "danger";
+    removeGemsButton.onclick = () => manageGems("remove");
+
+    gemsBox.append(
+      gemsTitle,
+      gemsUser,
+      gemsAmount,
+      addGemsButton,
+      removeGemsButton
+    );
+
+    container.appendChild(gemsBox);
+
+    /* 🛍️ SOLDES — PROPRIÉTAIRE UNIQUEMENT */
+    if (me.role === "owner") {
+      const discountBox = document.createElement("div");
+      discountBox.className = "card";
+
+      const discountTitle = document.createElement("strong");
+      discountTitle.textContent = "🛍️ Gérer les soldes de la boutique";
+
+      const discountInfo = document.createElement("p");
+      discountInfo.textContent =
+        "Choisis un article puis une réduction de 0 % à 100 %.";
+
+      const itemSelect = document.createElement("select");
+      itemSelect.id = "discountItemSelect";
+
+      const discountInput = document.createElement("input");
+      discountInput.id = "discountPercent";
+      discountInput.type = "number";
+      discountInput.min = "0";
+      discountInput.max = "100";
+      discountInput.value = "0";
+      discountInput.placeholder = "Réduction en %";
+
+      const saveDiscountButton = document.createElement("button");
+      saveDiscountButton.textContent = "💾 Appliquer la solde";
+      saveDiscountButton.onclick = saveItemDiscount;
+
+      const discountStatus = document.createElement("p");
+      discountStatus.id = "discountStatus";
+
+      discountBox.append(
+        discountTitle,
+        discountInfo,
+        itemSelect,
+        discountInput,
+        saveDiscountButton,
+        discountStatus
+      );
+
+      container.appendChild(discountBox);
+
+      try {
+        const items = await api("/api/shop/items");
+
+        itemSelect.innerHTML =
+          '<option value="">-- Choisir un article --</option>';
+
+        items.forEach(item => {
+          const option = document.createElement("option");
+
+          option.value = item.id;
+          option.dataset.discount = item.discount || 0;
+
+          option.textContent =
+            `${item.name} — 💎 ${item.price.toLocaleString("fr-FR")}` +
+            (item.discount > 0
+              ? ` — 🔥 -${item.discount} %`
+              : " — Prix normal");
+
+          itemSelect.appendChild(option);
+        });
+
+        itemSelect.addEventListener("change", () => {
+          const option =
+            itemSelect.options[itemSelect.selectedIndex];
+
+          discountInput.value =
+            option.dataset.discount || 0;
+        });
+
+      } catch (error) {
+        discountStatus.textContent =
+          "❌ Impossible de charger les articles : " +
+          error.message;
+      }
+    }
+
 
     users.forEach(user => {
       const card = document.createElement("div");
@@ -957,203 +958,42 @@ async function loadAdminUsers() {
 
       card.appendChild(title);
 
-      const info = document.createElement("p");
-      info.textContent =
-        `Créé le : ${user.created_at || "inconnu"}`;
-      card.appendChild(info);
-
-      if (user.role !== "owner") {
-        const ban = document.createElement("button");
-        ban.textContent = user.banned ? "✅ Débannir" : "🚫 Bannir";
-        ban.className = user.banned ? "success" : "danger";
-        ban.onclick = () =>
-          user.banned ? unbanUser(user.id) : banUser(user.id);
-        card.appendChild(ban);
-      }
-
       if (me.role === "owner" && user.role !== "owner") {
-        const role = document.createElement("button");
-        role.textContent =
+        const roleButton = document.createElement("button");
+
+        roleButton.textContent =
           user.role === "admin"
             ? "➖ Retirer Admin"
             : "➕ Donner Admin";
 
-        role.onclick = () =>
+        roleButton.onclick = () =>
           changeRole(
             user.id,
             user.role === "admin" ? "user" : "admin"
           );
 
-        card.appendChild(role);
+        card.appendChild(roleButton);
       }
 
-      if (user.role !== "owner" && user.username !== "chilladmin") {
-        const del = document.createElement("button");
-        del.textContent = "🗑️ Supprimer définitivement";
-        del.className = "danger";
+      if (user.role !== "owner") {
+        const banButton = document.createElement("button");
 
-        del.onclick = async () => {
-          if (!confirm(
-            `Supprimer définitivement ${user.username} ?\n\nToutes ses données liées seront supprimées.`
-          )) return;
+        banButton.textContent =
+          user.banned ? "✅ Débannir" : "🚫 Bannir";
 
-          try {
-            await api(`/api/admin/users/${user.id}/delete-permanently`, {
-              method: "POST"
-            });
+        banButton.className =
+          user.banned ? "success" : "danger";
 
-            alert("Compte supprimé définitivement.");
-            await loadAdminUsers();
-          } catch (error) {
-            alert(error.message);
-          }
-        };
+        banButton.onclick = () =>
+          user.banned
+            ? unbanUser(user.id)
+            : banUser(user.id);
 
-        card.appendChild(del);
+        card.appendChild(banButton);
       }
 
       container.appendChild(card);
     });
-  } catch (error) {
-    alert(error.message);
-  }
-}
-
-async function searchAdminUser() {
-  const input = document.getElementById("adminSearchUser");
-  const result = document.getElementById("adminUserResult");
-
-  const username = input?.value.trim();
-
-  if (!username) {
-    alert("Entre un pseudo.");
-    return;
-  }
-
-  try {
-    const data = await api(
-      `/api/admin/user-details?username=${encodeURIComponent(username)}`
-    );
-
-    result.innerHTML = "";
-
-    const user = data.user;
-
-    const title = document.createElement("h3");
-    title.textContent = `👤 ${user.username}`;
-    result.appendChild(title);
-
-    const info = document.createElement("p");
-    info.textContent =
-      `ID : ${user.id}
-       | Rôle : ${user.role}
-       | Banni : ${user.banned ? "Oui" : "Non"}
-       | Gemmes : ${Number(user.gems || 0).toLocaleString("fr-FR")}
-       | Créé le : ${user.created_at}
-       | Mot de passe : 🔒 Protégé`;
-    result.appendChild(info);
-
-    const accessoriesTitle = document.createElement("strong");
-    accessoriesTitle.textContent =
-      `🎒 Accessoires (${data.accessories.length})`;
-    result.appendChild(accessoriesTitle);
-
-    if (!data.accessories.length) {
-      const empty = document.createElement("p");
-      empty.textContent = "Aucun accessoire.";
-      result.appendChild(empty);
-    }
-
-    data.accessories.forEach(item => {
-      const row = document.createElement("div");
-      row.style.marginTop = "8px";
-
-      const text = document.createElement("span");
-      text.textContent =
-        `${item.item_name} — ${item.active ? "🟢 actif" : "⚪ inactif"} `;
-
-      const remove = document.createElement("button");
-      remove.textContent = "Retirer";
-      remove.className = "danger";
-
-      remove.onclick = async () => {
-        try {
-          await api(
-            `/api/admin/users/${user.id}/accessory/${encodeURIComponent(item.item_id)}`,
-            { method: "DELETE" }
-          );
-
-          await searchAdminUser();
-        } catch (error) {
-          alert(error.message);
-        }
-      };
-
-      row.append(text, remove);
-      result.appendChild(row);
-    });
-
-    const giveTitle = document.createElement("h4");
-    giveTitle.textContent = "🎁 Donner un accessoire";
-    result.appendChild(giveTitle);
-
-    const select = document.createElement("select");
-    select.id = "adminAccessorySelect";
-
-    const items = await api("/api/shop/items");
-
-    items.forEach(item => {
-      const option = document.createElement("option");
-      option.value = item.id;
-      option.textContent = item.name;
-      select.appendChild(option);
-    });
-
-    const give = document.createElement("button");
-    give.textContent = "🎁 Donner";
-    give.onclick = async () => {
-      try {
-        await api(`/api/admin/users/${user.id}/accessory`, {
-          method: "POST",
-          body: JSON.stringify({
-            itemId: select.value
-          })
-        });
-
-        alert("Accessoire donné.");
-        await searchAdminUser();
-      } catch (error) {
-        alert(error.message);
-      }
-    };
-
-    result.append(select, give);
-
-  } catch (error) {
-    result.innerHTML = "";
-    const errorText = document.createElement("p");
-    errorText.textContent = "❌ " + error.message;
-    result.appendChild(errorText);
-  }
-}
-
-async function sendAdminAnnouncement() {
-  const input = document.getElementById("adminAnnouncement");
-  const content = input?.value.trim();
-
-  if (!content) {
-    alert("Écris une annonce.");
-    return;
-  }
-
-  try {
-    await api("/api/admin/announcement", {
-      method: "POST",
-      body: JSON.stringify({ content })
-    });
-
-    input.value = "";
-    alert("📢 Annonce envoyée dans le chat public !");
   } catch (error) {
     alert(error.message);
   }
