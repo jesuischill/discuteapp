@@ -1,5 +1,4 @@
-// Restaurer la session si elle existe
-let token = localStorage.getItem("discuteapp_token");
+// La session est restaurée depuis le cookie HTTP-only.
 let me = null;
 let socket = null;
 let currentPrivateUser = null;
@@ -7,13 +6,13 @@ let currentPrivateUser = null;
 function headers() {
   return {
     "Content-Type": "application/json",
-    "Authorization": `Bearer ${token}`
   };
 }
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
     ...options,
+    credentials: "include",
     headers: {
       ...headers(),
       ...(options.headers || {})
@@ -72,24 +71,25 @@ async function login() {
 }
 
 function saveSession(data) {
-  token = data.token;
   me = data.user;
 
-  localStorage.setItem("discuteapp_token", token);
-  localStorage.setItem("discuteapp_user", JSON.stringify(me));
-
+  // L'authentification est gérée uniquement par le cookie HTTP-only.
   startApp();
 }
 
-function logout() {
+async function logout() {
   if (socket) socket.disconnect();
 
-  localStorage.removeItem("discuteapp_token");
-  localStorage.removeItem("discuteapp_user");
+  try {
+    await fetch("/api/logout", {
+      method: "POST",
+      credentials: "include"
+    });
+  } catch (error) {
+    console.error("Erreur déconnexion :", error);
+  }
 
-  token = null;
   me = null;
-
   location.reload();
 }
 
@@ -117,9 +117,7 @@ function startApp() {
 
   if (socket) socket.disconnect();
 
-  socket = io({
-    auth: { token }
-  });
+  socket = io();
 
   socket.on("connect_error", error => {
     if (error.message === "Non autorisé") {
@@ -162,7 +160,6 @@ function startApp() {
 
   socket.on("role_updated", data => {
     me.role = data.role;
-    localStorage.setItem("discuteapp_user", JSON.stringify(me));
 
     updateUserDisplay();
     alert(data.message);
@@ -218,7 +215,7 @@ function startApp() {
 async function updateShopAdminButton() {
   const button = document.getElementById("shopAdminButton");
 
-  if (!button || !token) return;
+  if (!button || !me) return;
 
   try {
     const data = await api("/api/accessories");
@@ -635,7 +632,7 @@ async function respondRequest(id, action) {
 }
 
 async function loadConversations() {
-  if (!token) return;
+  if (!me) return;
 
   try {
     const conversations = await api("/api/private-conversations");
@@ -1463,7 +1460,7 @@ async function addClubComment(id) {
 }
 
 
-if (token && me) {
+if (me) {
   startApp();
 }
 
@@ -1680,3 +1677,26 @@ async function openEmojiPicker() {
     alert("❌ " + error.message);
   }
 }
+
+
+async function restoreSessionFromCookie() {
+  try {
+    const response = await fetch("/api/me", {
+      credentials: "include"
+    });
+
+    if (!response.ok) {
+      me = null;
+      return;
+    }
+
+    const data = await response.json();
+    me = data.user;
+    startApp();
+  } catch (error) {
+    console.error("Erreur restauration session :", error);
+    me = null;
+  }
+}
+
+restoreSessionFromCookie();

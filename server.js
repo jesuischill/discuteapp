@@ -65,6 +65,10 @@ CREATE TABLE IF NOT EXISTS public_messages_archive (
 `);
 
 app.use(express.json());
+
+const cookieParser = require("cookie-parser");
+app.use(cookieParser());
+
 app.use(express.static(path.join(__dirname, "public")));
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -89,13 +93,13 @@ function getDbUser(id) {
 }
 
 function auth(req, res, next) {
-  const header = req.headers.authorization;
+  const token = req.cookies?.discuteapp_session;
 
-  if (!header?.startsWith("Bearer ")) {
+  if (!token) {
     return res.status(401).json({ error: "Non connecté." });
   }
 
-  const decoded = getUserFromToken(header.slice(7));
+  const decoded = getUserFromToken(token);
   const user = decoded ? getDbUser(decoded.id) : null;
 
   if (!user) {
@@ -181,8 +185,15 @@ app.post("/api/register", async (req, res) => {
 
     const user = getDbUser(result.lastInsertRowid);
 
+    res.cookie("discuteapp_session", createToken(user), {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/"
+    });
+
     res.json({
-      token: createToken(user),
       user: {
         id: user.id,
         username: user.username,
@@ -217,14 +228,37 @@ app.post("/api/login", async (req, res) => {
     return res.status(401).json({ error: "Identifiants incorrects." });
   }
 
+  res.cookie("discuteapp_session", createToken(user), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+    path: "/"
+  });
+
   res.json({
-    token: createToken(user),
     user: {
       id: user.id,
       username: user.username,
       role: user.role
     }
   });
+});
+
+/* DÉCONNEXION */
+app.get("/api/me", auth, (req, res) => {
+  res.json({ user: req.user });
+});
+
+app.post("/api/logout", (req, res) => {
+  res.clearCookie("discuteapp_session", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/"
+  });
+
+  res.json({ ok: true });
 });
 
 /* UTILISATEURS */
@@ -1734,7 +1768,15 @@ app.post("/api/admin/users/:id/unban", auth, adminOnly, (req, res) => {
 
 /* SOCKET */
 io.use((socket, next) => {
-  const token = socket.handshake.auth?.token;
+  const cookieHeader = socket.handshake.headers.cookie || "";
+  const cookies = Object.fromEntries(
+    cookieHeader
+      .split(";")
+      .map(part => part.trim().split("="))
+      .filter(([key, value]) => key && value)
+  );
+
+  const token = cookies.discuteapp_session;
   const decoded = getUserFromToken(token);
   const user = decoded ? getDbUser(decoded.id) : null;
 

@@ -106,21 +106,17 @@
   </main>
 
   <script>
-    const token = localStorage.getItem("discuteapp_token");
+    
     const itemsContainer = document.getElementById("items");
 
-    if (!token) {
-      itemsContainer.innerHTML =
-        '<p class="empty">❌ Tu dois être connecté pour voir tes accessoires.</p>';
-    } else {
-      loadAccessories();
-    }
+    loadAccessories();
 
     async function loadAccessories() {
       try {
         const response = await fetch("/api/accessories", {
-          headers: {
-            "Authorization": `Bearer ${token}`
+          credentials: "include",
+            headers: {
+            
           }
         });
 
@@ -185,9 +181,10 @@
       try {
         const response = await fetch(`/api/accessories/${id}/toggle`, {
           method: "POST",
-          headers: {
+          credentials: "include",
+            headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            
           }
         });
 

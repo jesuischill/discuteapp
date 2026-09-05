@@ -573,13 +573,14 @@
   </section>
 
   <script>
-    const token = localStorage.getItem("discuteapp_token");
+    
 
     async function loadGems() {
       try {
         const response = await fetch("/api/my-gems", {
-          headers: {
-            "Authorization": `Bearer ${token}`
+          credentials: "include",
+            headers: {
+            
           }
         });
 
@@ -649,9 +650,10 @@
       try {
         const response = await fetch("/api/shop/buy", {
           method: "POST",
-          headers: {
+          credentials: "include",
+            headers: {
             "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`
+            
           },
           body: JSON.stringify({
             itemId,
@@ -714,8 +716,9 @@
     async function loadDiscounts() {
       try {
         const response = await fetch("/api/shop/items", {
-          headers: {
-            "Authorization": `Bearer ${token}`
+          credentials: "include",
+            headers: {
+            
           },
           cache: "no-store"
         });
