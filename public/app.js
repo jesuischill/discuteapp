@@ -521,10 +521,6 @@ async function showUsers() {
       button.textContent = "Envoyer une demande privée";
       button.onclick = () => sendRequest(user.id);
 
-      const trade = document.createElement("button");
-      trade.textContent = "🤝 Proposer un échange";
-      trade.onclick = () => requestTrade(user.id);
-      card.append(name, role, status, button, trade);
       list.appendChild(card);
     });
   } catch (error) {
