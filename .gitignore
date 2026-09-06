@@ -21,3 +21,12 @@ discuteapp.db
 *.backup*
 *.bak-*
 backup-avant-nettoyage-*/
+
+# Données locales et sauvegardes
+discuteapp.db
+*.db
+*.db-*
+*.bak
+*.backup*
+*.bak-*
+backup-avant-nettoyage-*/
