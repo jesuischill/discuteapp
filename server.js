@@ -55,6 +55,20 @@ function getDiscuteBotSettings() {
 
 
 
+
+// ==================== MIGRATION ADMIN PRODUCTION ====================
+try {
+  db.prepare(`
+    UPDATE users
+    SET role = 'owner'
+    WHERE username = 'chilladmin'
+  `).run();
+
+  console.log("✅ Rôle owner appliqué à chilladmin");
+} catch (error) {
+  console.error("⚠️ Migration admin:", error.message);
+}
+
 // ==================== QUIZ GEMMES ====================
 
 const QUIZ_REWARDS = {
