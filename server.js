@@ -571,10 +571,22 @@ const QUIZ_BANKS = {
 
 const activeQuizSessions = new Map();
 
+const QUIZ_SESSION_TTL = 10 * 60 * 1000;
+const QUIZ_TOTAL_QUESTIONS = 10;
+const QUIZ_MIN_SCORE = 8;
+
 function shuffleQuizQuestions(list) {
-  return [...list]
-    .sort(() => Math.random() - 0.5)
-    .slice(0, Math.min(10, list.length));
+  const copy = [...list];
+
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+
+  return copy.slice(
+    0,
+    Math.min(QUIZ_TOTAL_QUESTIONS, copy.length)
+  );
 }
 
 function shuffleQuizOptions(question) {
@@ -583,13 +595,35 @@ function shuffleQuizOptions(question) {
     correct: index === question[2]
   }));
 
-  answers.sort(() => Math.random() - 0.5);
+  for (let i = answers.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [answers[i], answers[j]] = [answers[j], answers[i]];
+  }
 
   return {
     question: question[0],
     options: answers.map(a => a.label),
     correctIndex: answers.findIndex(a => a.correct)
   };
+}
+
+function createQuizSessionId(userId) {
+  return [
+    userId,
+    Date.now(),
+    Math.random().toString(36).slice(2),
+    Math.random().toString(36).slice(2)
+  ].join("-");
+}
+
+function cleanupQuizSession(sessionId) {
+  activeQuizSessions.delete(sessionId);
+}
+
+function scheduleQuizSessionCleanup(sessionId) {
+  setTimeout(() => {
+    cleanupQuizSession(sessionId);
+  }, QUIZ_SESSION_TTL);
 }
 
 // ==================== DISCUTEBOT ====================
@@ -2974,14 +3008,144 @@ io.on("connection", socket => {
 });
 
 
+
+// ==================== QUIZ DATABASE ====================
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS quiz_settings (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  enabled INTEGER NOT NULL DEFAULT 1,
+  reward_facile INTEGER NOT NULL DEFAULT 20,
+  reward_difficile INTEGER NOT NULL DEFAULT 50,
+  reward_impossible INTEGER NOT NULL DEFAULT 100,
+  difficulty_facile INTEGER NOT NULL DEFAULT 1,
+  difficulty_difficile INTEGER NOT NULL DEFAULT 1,
+  difficulty_impossible INTEGER NOT NULL DEFAULT 1,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+INSERT OR IGNORE INTO quiz_settings
+(id, enabled, reward_facile, reward_difficile, reward_impossible,
+ difficulty_facile, difficulty_difficile, difficulty_impossible)
+VALUES (1, 1, 20, 50, 100, 1, 1, 1);
+
+CREATE TABLE IF NOT EXISTS quiz_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  quiz_id TEXT NOT NULL,
+  quiz_name TEXT NOT NULL,
+  difficulty TEXT NOT NULL,
+  score INTEGER NOT NULL,
+  total_questions INTEGER NOT NULL,
+  reward INTEGER NOT NULL DEFAULT 0,
+  best_combo INTEGER NOT NULL DEFAULT 0,
+  won INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS quiz_combo_stats (
+  user_id INTEGER PRIMARY KEY,
+  current_combo INTEGER NOT NULL DEFAULT 0,
+  best_combo INTEGER NOT NULL DEFAULT 0,
+  total_correct INTEGER NOT NULL DEFAULT 0,
+  total_answers INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS quiz_gem_earnings (
+  user_id INTEGER PRIMARY KEY,
+  total_gems INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_quiz_history_user
+ON quiz_history(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_quiz_history_created
+ON quiz_history(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_quiz_history_score
+ON quiz_history(score);
+
+CREATE INDEX IF NOT EXISTS idx_quiz_history_reward
+ON quiz_history(reward);
+`);
+
+try {
+  const userColumns = db.prepare("PRAGMA table_info(users)").all();
+
+  if (!userColumns.some(c => c.name === "gems")) {
+    db.exec("ALTER TABLE users ADD COLUMN gems INTEGER NOT NULL DEFAULT 0");
+    console.log("💎 Colonne users.gems ajoutée.");
+  }
+} catch (error) {
+  console.error("Erreur migration users.gems :", error.message);
+  throw error;
+}
+
+function getQuizSettings() {
+  const row = db.prepare(`
+    SELECT
+      enabled,
+      reward_facile,
+      reward_difficile,
+      reward_impossible,
+      difficulty_facile,
+      difficulty_difficile,
+      difficulty_impossible
+    FROM quiz_settings
+    WHERE id = 1
+  `).get();
+
+  return row || {
+    enabled: 1,
+    reward_facile: 20,
+    reward_difficile: 50,
+    reward_impossible: 100,
+    difficulty_facile: 1,
+    difficulty_difficile: 1,
+    difficulty_impossible: 1
+  };
+}
+
+function getQuizRewards() {
+  const settings = getQuizSettings();
+
+  return {
+    facile: Number(settings.reward_facile) || 20,
+    difficile: Number(settings.reward_difficile) || 50,
+    impossible: Number(settings.reward_impossible) || 100
+  };
+}
+
+function isQuizDifficultyEnabled(difficulty) {
+  const settings = getQuizSettings();
+
+  return Boolean(
+    settings[`difficulty_${difficulty}`]
+  );
+}
+
 // ==================== QUIZ API ====================
 
 app.get("/api/games/quizzes", auth, (req, res) => {
+  const settings = getQuizSettings();
+  const rewards = getQuizRewards();
+
+  if (!settings.enabled) {
+    return res.json([]);
+  }
+
   res.json(
     Object.entries(QUIZ_BANKS).map(([id, quiz]) => ({
       id,
       name: quiz.name,
-      rewards: QUIZ_REWARDS
+      rewards,
+      difficulties: {
+        facile: Boolean(settings.difficulty_facile),
+        difficile: Boolean(settings.difficulty_difficile),
+        impossible: Boolean(settings.difficulty_impossible)
+      }
     }))
   );
 });
@@ -2990,45 +3154,72 @@ app.post("/api/games/quiz/start", auth, (req, res) => {
   const quizId = String(req.body?.quizId || "");
   const difficulty = String(req.body?.difficulty || "");
 
+  const settings = getQuizSettings();
+  const rewards = getQuizRewards();
   const quiz = QUIZ_BANKS[quizId];
 
-  if (!quiz) {
-    return res.status(400).json({ error: "Quiz invalide." });
+  if (!settings.enabled) {
+    return res.status(403).json({
+      error: "Les Quiz sont actuellement désactivés."
+    });
   }
 
-  if (!QUIZ_REWARDS[difficulty]) {
-    return res.status(400).json({ error: "Difficulté invalide." });
+  if (!quiz) {
+    return res.status(400).json({
+      error: "Quiz invalide."
+    });
+  }
+
+  if (!["facile", "difficile", "impossible"].includes(difficulty)) {
+    return res.status(400).json({
+      error: "Difficulté invalide."
+    });
+  }
+
+  if (!isQuizDifficultyEnabled(difficulty)) {
+    return res.status(403).json({
+      error: "Cette difficulté est actuellement désactivée."
+    });
   }
 
   const questions = quiz.questions[difficulty];
 
-  if (!Array.isArray(questions) || questions.length < 10) {
+  if (!Array.isArray(questions) || questions.length < QUIZ_TOTAL_QUESTIONS) {
     return res.status(500).json({
       error: "Ce quiz ne possède pas assez de questions."
     });
   }
 
-  const selected = shuffleQuizQuestions(questions).map(shuffleQuizOptions);
+  const selected =
+    shuffleQuizQuestions(questions)
+      .map(shuffleQuizOptions);
 
-  const sessionId =
-    `${req.user.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const sessionId = createQuizSessionId(req.user.id);
+  const now = Date.now();
 
   activeQuizSessions.set(sessionId, {
     userId: req.user.id,
     quizId,
+    quizName: quiz.name,
     difficulty,
     questions: selected,
     current: 0,
     score: 0,
+    combo: 0,
+    bestCombo: 0,
+    answered: false,
     finished: false,
-    createdAt: Date.now()
+    createdAt: now,
+    expiresAt: now + QUIZ_SESSION_TTL
   });
+
+  scheduleQuizSessionCleanup(sessionId);
 
   res.json({
     sessionId,
     quiz: quiz.name,
     difficulty,
-    reward: QUIZ_REWARDS[difficulty],
+    reward: rewards[difficulty],
     totalQuestions: selected.length,
     questions: selected.map(q => ({
       question: q.question,
@@ -3043,9 +3234,23 @@ app.post("/api/games/quiz/answer", auth, (req, res) => {
 
   const session = activeQuizSessions.get(sessionId);
 
-  if (!session || session.userId !== req.user.id) {
+  if (!session) {
     return res.status(404).json({
-      error: "Partie introuvable."
+      error: "Partie introuvable ou expirée."
+    });
+  }
+
+  if (session.userId !== req.user.id) {
+    return res.status(403).json({
+      error: "Cette partie ne t'appartient pas."
+    });
+  }
+
+  if (Date.now() > session.expiresAt) {
+    cleanupQuizSession(sessionId);
+
+    return res.status(410).json({
+      error: "Cette partie a expiré."
     });
   }
 
@@ -3055,7 +3260,17 @@ app.post("/api/games/quiz/answer", auth, (req, res) => {
     });
   }
 
-  if (!Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex > 3) {
+  if (session.answered) {
+    return res.status(409).json({
+      error: "Cette question a déjà reçu une réponse."
+    });
+  }
+
+  if (
+    !Number.isInteger(answerIndex) ||
+    answerIndex < 0 ||
+    answerIndex > 3
+  ) {
     return res.status(400).json({
       error: "Réponse invalide."
     });
@@ -3069,21 +3284,61 @@ app.post("/api/games/quiz/answer", auth, (req, res) => {
     });
   }
 
-  const correct = answerIndex === question.correctIndex;
+  session.answered = true;
+
+  const correct =
+    answerIndex === question.correctIndex;
 
   if (correct) {
     session.score++;
+    session.combo++;
+    session.bestCombo =
+      Math.max(session.bestCombo, session.combo);
+  } else {
+    session.combo = 0;
   }
 
+  const combo = session.combo;
+
+  const comboBonus =
+    correct && combo >= 10 ? 10 :
+    correct && combo >= 7 ? 5 :
+    correct && combo >= 5 ? 3 :
+    correct && combo >= 3 ? 1 :
+    0;
+
   session.current++;
+
+  db.prepare(`
+    INSERT INTO quiz_combo_stats
+      (user_id, current_combo, best_combo,
+       total_correct, total_answers, updated_at)
+    VALUES (?, ?, ?, ?, 1, CURRENT_TIMESTAMP)
+    ON CONFLICT(user_id) DO UPDATE SET
+      current_combo = excluded.current_combo,
+      best_combo = MAX(quiz_combo_stats.best_combo, excluded.best_combo),
+      total_correct = quiz_combo_stats.total_correct + excluded.total_correct,
+      total_answers = quiz_combo_stats.total_answers + 1,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(
+    req.user.id,
+    session.combo,
+    session.bestCombo,
+    correct ? 1 : 0
+  );
 
   const finished =
     session.current >= session.questions.length;
 
   if (!finished) {
+    session.answered = false;
+
     return res.json({
       correct,
       score: session.score,
+      combo,
+      bestCombo: session.bestCombo,
+      comboBonus,
       finished: false,
       nextQuestion: session.current
     });
@@ -3091,48 +3346,324 @@ app.post("/api/games/quiz/answer", auth, (req, res) => {
 
   session.finished = true;
 
-  const reward =
-    session.score >= 8
-      ? QUIZ_REWARDS[session.difficulty]
+  const rewards = getQuizRewards();
+
+  const baseReward =
+    session.score >= QUIZ_MIN_SCORE
+      ? rewards[session.difficulty]
       : 0;
 
-  let newGems = null;
+  const reward = baseReward + comboBonus;
+  const won = baseReward > 0;
 
-  if (reward > 0) {
+  let newGems = 0;
+
+  const transaction = db.transaction(() => {
+    if (reward > 0) {
+      db.prepare(`
+        UPDATE users
+        SET gems = COALESCE(gems, 0) + ?
+        WHERE id = ?
+      `).run(reward, req.user.id);
+
+      db.prepare(`
+        INSERT INTO quiz_gem_earnings
+          (user_id, total_gems, updated_at)
+        VALUES (?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(user_id) DO UPDATE SET
+          total_gems = quiz_gem_earnings.total_gems + excluded.total_gems,
+          updated_at = CURRENT_TIMESTAMP
+      `).run(req.user.id, reward);
+    }
+
     db.prepare(`
-      UPDATE users
-      SET gems = COALESCE(gems, 0) + ?
-      WHERE id = ?
-    `).run(reward, req.user.id);
+      INSERT INTO quiz_history
+        (user_id, quiz_id, quiz_name, difficulty,
+         score, total_questions, reward,
+         best_combo, won)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      req.user.id,
+      session.quizId,
+      session.quizName,
+      session.difficulty,
+      session.score,
+      session.questions.length,
+      reward,
+      session.bestCombo,
+      won ? 1 : 0
+    );
 
-    newGems = db.prepare(`
-      SELECT gems
-      FROM users
-      WHERE id = ?
-    `).get(req.user.id)?.gems ?? 0;
-  } else {
-    newGems = db.prepare(`
-      SELECT gems
-      FROM users
-      WHERE id = ?
-    `).get(req.user.id)?.gems ?? 0;
-  }
+    newGems =
+      db.prepare(`
+        SELECT COALESCE(gems, 0) AS gems
+        FROM users
+        WHERE id = ?
+      `).get(req.user.id)?.gems || 0;
+  });
 
-  setTimeout(() => {
-    activeQuizSessions.delete(sessionId);
-  }, 10 * 60 * 1000);
+  transaction();
+
+  scheduleQuizSessionCleanup(sessionId);
 
   return res.json({
     correct,
     score: session.score,
+    combo,
+    bestCombo: session.bestCombo,
+    comboBonus,
     finished: true,
     totalQuestions: session.questions.length,
-    won: reward > 0,
+    won,
     reward,
+    baseReward,
     gems: newGems
   });
 });
 
+// ==================== QUIZ LEADERBOARD ====================
+
+app.get("/api/games/quiz/leaderboard", auth, (req, res) => {
+  const top = db.prepare(`
+    SELECT
+      u.id,
+      u.username,
+      COALESCE(SUM(h.reward), 0) AS quiz_gems,
+      COUNT(h.id) AS games,
+      COALESCE(MAX(h.score), 0) AS best_score,
+      COALESCE(MAX(h.best_combo), 0) AS best_combo
+    FROM users u
+    LEFT JOIN quiz_history h ON h.user_id = u.id
+    GROUP BY u.id
+    ORDER BY quiz_gems DESC, best_score DESC, best_combo DESC, u.username ASC
+    LIMIT 10
+  `).all();
+
+  const rankRow = db.prepare(`
+    SELECT COUNT(*) + 1 AS rank
+    FROM (
+      SELECT
+        u.id,
+        COALESCE(SUM(h.reward), 0) AS quiz_gems
+      FROM users u
+      LEFT JOIN quiz_history h ON h.user_id = u.id
+      GROUP BY u.id
+      HAVING quiz_gems > (
+        SELECT COALESCE(SUM(reward), 0)
+        FROM quiz_history
+        WHERE user_id = ?
+      )
+    )
+  `).get(req.user.id);
+
+  const me = db.prepare(`
+    SELECT
+      u.id,
+      u.username,
+      COALESCE(SUM(h.reward), 0) AS quiz_gems,
+      COUNT(h.id) AS games,
+      COALESCE(MAX(h.score), 0) AS best_score,
+      COALESCE(MAX(h.best_combo), 0) AS best_combo
+    FROM users u
+    LEFT JOIN quiz_history h ON h.user_id = u.id
+    WHERE u.id = ?
+    GROUP BY u.id
+  `).get(req.user.id);
+
+  res.json({
+    top,
+    me: {
+      ...me,
+      rank: rankRow?.rank || 1
+    }
+  });
+});
+
+// ==================== QUIZ HISTORY ====================
+
+app.get("/api/games/quiz/history", auth, (req, res) => {
+  const history = db.prepare(`
+    SELECT
+      id,
+      quiz_name,
+      difficulty,
+      score,
+      total_questions,
+      reward,
+      best_combo,
+      won,
+      created_at
+    FROM quiz_history
+    WHERE user_id = ?
+    ORDER BY id DESC
+    LIMIT 100
+  `).all(req.user.id);
+
+  res.json(history);
+});
+
+// ==================== QUIZ PLAYER STATS ====================
+
+app.get("/api/games/quiz/stats", auth, (req, res) => {
+  const stats = db.prepare(`
+    SELECT
+      COUNT(*) AS games,
+      COALESCE(SUM(reward), 0) AS gems,
+      COALESCE(MAX(score), 0) AS best_score,
+      COALESCE(MAX(best_combo), 0) AS best_combo,
+      COALESCE(SUM(score), 0) AS correct_answers,
+      COALESCE(SUM(total_questions), 0) AS total_questions,
+      COALESCE(SUM(won), 0) AS wins
+    FROM quiz_history
+    WHERE user_id = ?
+  `).get(req.user.id);
+
+  const combo = db.prepare(`
+    SELECT
+      current_combo,
+      best_combo,
+      total_correct,
+      total_answers
+    FROM quiz_combo_stats
+    WHERE user_id = ?
+  `).get(req.user.id);
+
+  res.json({
+    ...stats,
+    combo: combo || {
+      current_combo: 0,
+      best_combo: 0,
+      total_correct: 0,
+      total_answers: 0
+    }
+  });
+});
+
+// ==================== QUIZ ADMIN ====================
+
+app.get("/api/admin/quiz/settings", auth, adminOnly, (req, res) => {
+  res.json(getQuizSettings());
+});
+
+app.post("/api/admin/quiz/settings", auth, adminOnly, (req, res) => {
+  const enabled =
+    req.body?.enabled ? 1 : 0;
+
+  const rewards = {
+    facile: Math.max(
+      0,
+      Math.min(100000,
+        Number(req.body?.reward_facile)
+      )
+    ),
+    difficile: Math.max(
+      0,
+      Math.min(100000,
+        Number(req.body?.reward_difficile)
+      )
+    ),
+    impossible: Math.max(
+      0,
+      Math.min(100000,
+        Number(req.body?.reward_impossible)
+      )
+    )
+  };
+
+  const difficulties = {
+    facile: req.body?.difficulty_facile ? 1 : 0,
+    difficile: req.body?.difficulty_difficile ? 1 : 0,
+    impossible: req.body?.difficulty_impossible ? 1 : 0
+  };
+
+  if (
+    !Number.isFinite(rewards.facile) ||
+    !Number.isFinite(rewards.difficile) ||
+    !Number.isFinite(rewards.impossible)
+  ) {
+    return res.status(400).json({
+      error: "Récompense invalide."
+    });
+  }
+
+  db.prepare(`
+    UPDATE quiz_settings
+    SET enabled = ?,
+        reward_facile = ?,
+        reward_difficile = ?,
+        reward_impossible = ?,
+        difficulty_facile = ?,
+        difficulty_difficile = ?,
+        difficulty_impossible = ?,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE id = 1
+  `).run(
+    enabled,
+    rewards.facile,
+    rewards.difficile,
+    rewards.impossible,
+    difficulties.facile,
+    difficulties.difficile,
+    difficulties.impossible
+  );
+
+  res.json({
+    message: "Réglages Quiz enregistrés.",
+    settings: getQuizSettings()
+  });
+});
+
+app.get("/api/admin/quiz/stats", auth, adminOnly, (req, res) => {
+  const totals = db.prepare(`
+    SELECT
+      COUNT(*) AS games,
+      COUNT(DISTINCT user_id) AS players,
+      COALESCE(SUM(reward), 0) AS gems_given,
+      COALESCE(AVG(score), 0) AS average_score,
+      COALESCE(MAX(score), 0) AS best_score,
+      COALESCE(MAX(best_combo), 0) AS best_combo,
+      COALESCE(SUM(won), 0) AS wins
+    FROM quiz_history
+  `).get();
+
+  const bestPlayers = db.prepare(`
+    SELECT
+      u.username,
+      COALESCE(SUM(h.reward), 0) AS quiz_gems,
+      COUNT(h.id) AS games,
+      COALESCE(MAX(h.score), 0) AS best_score,
+      COALESCE(MAX(h.best_combo), 0) AS best_combo
+    FROM quiz_history h
+    JOIN users u ON u.id = h.user_id
+    GROUP BY h.user_id
+    ORDER BY quiz_gems DESC, best_score DESC, best_combo DESC
+    LIMIT 10
+  `).all();
+
+  const byDifficulty = db.prepare(`
+    SELECT
+      difficulty,
+      COUNT(*) AS games,
+      COALESCE(SUM(reward), 0) AS gems,
+      COALESCE(AVG(score), 0) AS average_score,
+      COALESCE(SUM(won), 0) AS wins
+    FROM quiz_history
+    GROUP BY difficulty
+    ORDER BY
+      CASE difficulty
+        WHEN 'facile' THEN 1
+        WHEN 'difficile' THEN 2
+        WHEN 'impossible' THEN 3
+        ELSE 4
+      END
+  `).all();
+
+  res.json({
+    totals,
+    bestPlayers,
+    byDifficulty
+  });
+});
 
 server.listen(PORT, () => {
   console.log(`DiscuteApp démarré : http://localhost:${PORT}`);

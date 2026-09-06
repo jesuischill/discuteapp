@@ -2,11 +2,12 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>🧠 Quiz · DiscuteApp</title>
 
 <style>
 *{box-sizing:border-box}
+
 body{
   margin:0;
   min-height:100vh;
@@ -15,43 +16,34 @@ body{
   background:
     radial-gradient(circle at top,#172554 0,#020617 55%,#000 100%);
 }
+
 main{
-  width:min(1050px,94%);
-  margin:0 auto;
-  padding:28px 0 50px;
+  width:min(1100px,94%);
+  margin:auto;
+  padding:28px 0 55px;
 }
-.header{
-  text-align:center;
-  margin-bottom:25px;
-}
-.header h1{
-  font-size:clamp(30px,6vw,52px);
-  margin:0 0 8px;
-}
-.header p{
-  color:#cbd5e1;
-  margin:0;
-}
+
+.header{text-align:center;margin-bottom:25px}
+.header h1{font-size:clamp(30px,6vw,52px);margin:0 0 8px}
+.header p{color:#cbd5e1;margin:0}
+
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(230px,1fr));
+  grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
   gap:15px;
 }
+
 .card{
   border:1px solid rgba(148,163,184,.25);
   border-radius:20px;
   padding:22px;
-  background:rgba(15,23,42,.82);
+  background:rgba(15,23,42,.86);
   box-shadow:0 15px 40px rgba(0,0,0,.25);
 }
-.card h2{
-  margin:0 0 8px;
-  font-size:21px;
-}
-.card p{
-  color:#94a3b8;
-  min-height:42px;
-}
+
+.card h2{margin:0 0 10px}
+.card p{color:#94a3b8}
+
 button{
   width:100%;
   border:0;
@@ -63,17 +55,19 @@ button{
   background:#2563eb;
   margin-top:8px;
 }
+
 button:hover{filter:brightness(1.12)}
-.back{
-  background:#334155;
-  margin-bottom:15px;
-}
+button:disabled{opacity:.55;cursor:not-allowed}
+
+.back{background:#334155;margin-bottom:15px}
 .hidden{display:none}
+
 .levels{
   display:grid;
   grid-template-columns:repeat(3,1fr);
   gap:12px;
 }
+
 .level{
   padding:20px 12px;
   border-radius:16px;
@@ -81,65 +75,151 @@ button:hover{filter:brightness(1.12)}
   border:1px solid rgba(255,255,255,.12);
   background:#111827;
 }
+
 .level strong{
   display:block;
   font-size:20px;
   margin-bottom:5px;
 }
+
 .easy{border-color:#22c55e}
 .hard{border-color:#f59e0b}
 .impossible{border-color:#ef4444}
-.question-box{
-  max-width:760px;
-  margin:0 auto;
+
+.quiz-layout{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 280px;
+  gap:15px;
+  align-items:start;
 }
+
+.question-box{min-width:0}
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-bottom:15px;
+}
+
+.stat{
+  padding:10px 13px;
+  border-radius:12px;
+  background:#0f172a;
+  border:1px solid #334155;
+  font-weight:800;
+}
+
+.combo{
+  color:#fbbf24;
+  text-shadow:0 0 12px rgba(251,191,36,.45);
+}
+
 .progress{
-  height:9px;
+  height:10px;
   background:#1e293b;
   border-radius:99px;
   overflow:hidden;
   margin:15px 0 25px;
 }
+
 .progress div{
   height:100%;
   background:#3b82f6;
   transition:.25s;
 }
-.answers{
-  display:grid;
-  gap:12px;
+
+.question{
+  font-size:clamp(23px,4vw,34px);
+  line-height:1.25;
+  margin:10px 0 22px;
 }
+
+.answers{display:grid;gap:12px}
+
 .answer{
   text-align:left;
   background:#1e293b;
   border:1px solid #334155;
 }
+
 .answer.correct{
   background:#166534;
   border-color:#22c55e;
 }
+
 .answer.wrong{
   background:#991b1b;
   border-color:#ef4444;
 }
-.result{
-  text-align:center;
-  padding:35px 20px;
+
+.answer:disabled{opacity:1}
+
+.side h3{margin-top:0}
+
+.side-row{
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px 0;
+  border-bottom:1px solid rgba(148,163,184,.15);
 }
-.result .big{
-  font-size:55px;
+
+.big{
+  font-size:58px;
+  text-align:center;
   margin-bottom:10px;
 }
-.gem{
-  color:#60a5fa;
-  font-weight:900;
+
+.result{text-align:center;padding:35px 20px}
+.result-score{font-size:34px;font-weight:900;margin:15px 0}
+.result-reward{font-size:22px;font-weight:900}
+
+.gem{color:#60a5fa;font-weight:900}
+.small{color:#94a3b8;font-size:14px}
+
+.summary{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:10px;
+  margin:20px 0;
 }
-.small{
-  color:#94a3b8;
+
+.summary-box{
+  padding:15px;
+  border-radius:14px;
+  background:#0f172a;
+  border:1px solid #334155;
+}
+
+.summary-box strong{
+  display:block;
+  font-size:25px;
+  margin-top:5px;
+}
+
+.history{
+  display:grid;
+  gap:8px;
+  margin-top:15px;
+}
+
+.history-row{
+  display:grid;
+  grid-template-columns:1.4fr 1fr .8fr .8fr .8fr;
+  gap:8px;
+  padding:11px;
+  border-radius:10px;
+  background:#0f172a;
   font-size:14px;
 }
-@media(max-width:650px){
+
+@media(max-width:750px){
+  .quiz-layout{grid-template-columns:1fr}
   .levels{grid-template-columns:1fr}
+  .summary{grid-template-columns:1fr}
+  .history-row{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
@@ -150,13 +230,25 @@ button:hover{filter:brightness(1.12)}
 <section id="home">
   <div class="header">
     <h1>🧠 Quiz DiscuteApp</h1>
-    <p>Teste tes connaissances et gagne des 💎</p>
+    <p>Teste tes connaissances, construis ton combo et gagne des 💎</p>
   </div>
 
   <div id="quizList" class="grid">
     <div class="card">
       <h2>Chargement...</h2>
       <p>Chargement des quiz.</p>
+    </div>
+  </div>
+
+  <div style="margin-top:25px" class="grid">
+    <div class="card">
+      <h2>🏆 Classement</h2>
+      <div id="leaderboard">Chargement...</div>
+    </div>
+
+    <div class="card">
+      <h2>📊 Mes statistiques</h2>
+      <div id="myStats">Chargement...</div>
     </div>
   </div>
 
@@ -170,44 +262,76 @@ button:hover{filter:brightness(1.12)}
 
   <div class="header">
     <h1 id="difficultyTitle">Choisis ton niveau</h1>
-    <p>Plus c'est difficile, plus tu gagnes de 💎</p>
+    <p>Objectif : <strong>8/10</strong> pour obtenir la récompense.</p>
   </div>
 
   <div class="levels">
-    <div class="level easy">
+    <div class="level easy" id="levelFacile">
       <strong>🟢 Facile</strong>
-      <span class="gem">+20 💎</span>
+      <span class="gem" id="rewardFacile">+20 💎</span>
       <button onclick="startQuiz('facile')">Jouer</button>
     </div>
 
-    <div class="level hard">
+    <div class="level hard" id="levelDifficile">
       <strong>🟠 Difficile</strong>
-      <span class="gem">+50 💎</span>
+      <span class="gem" id="rewardDifficile">+50 💎</span>
       <button onclick="startQuiz('difficile')">Jouer</button>
     </div>
 
-    <div class="level impossible">
+    <div class="level impossible" id="levelImpossible">
       <strong>🔴 Impossible</strong>
-      <span class="gem">+100 💎</span>
+      <span class="gem" id="rewardImpossible">+100 💎</span>
       <button onclick="startQuiz('impossible')">Jouer</button>
     </div>
   </div>
 </section>
 
 <section id="game" class="hidden">
-  <button class="back" onclick="showDifficulty()">← Changer de difficulté</button>
+  <button class="back" onclick="showDifficulty()">← Quitter la partie</button>
 
-  <div class="question-box card">
-    <div class="small" id="quizName"></div>
-    <h2 id="question"></h2>
+  <div class="quiz-layout">
+    <div class="question-box card">
+      <div class="topbar">
+        <div class="stat" id="quizName"></div>
+        <div class="stat" id="counter">Question 1 / 10</div>
+      </div>
 
-    <div class="progress">
-      <div id="progress"></div>
+      <div class="progress">
+        <div id="progress"></div>
+      </div>
+
+      <div class="topbar">
+        <div class="stat">💎 Score : <span id="liveScore">0</span></div>
+        <div class="stat combo">🔥 Combo : <span id="liveCombo">0</span></div>
+      </div>
+
+      <h2 id="question" class="question"></h2>
+
+      <div id="answers" class="answers"></div>
     </div>
 
-    <div class="small" id="counter"></div>
+    <aside class="card side">
+      <h3>🎯 Objectif</h3>
 
-    <div id="answers" class="answers"></div>
+      <div class="side-row">
+        <span>Minimum</span>
+        <strong>8 / 10</strong>
+      </div>
+
+      <div class="side-row">
+        <span>Combo</span>
+        <strong id="sideCombo">0</strong>
+      </div>
+
+      <div class="side-row">
+        <span>Meilleur combo</span>
+        <strong id="sideBestCombo">0</strong>
+      </div>
+
+      <p class="small">
+        Une mauvaise réponse remet le combo à zéro.
+      </p>
+    </aside>
   </div>
 </section>
 
@@ -215,11 +339,37 @@ button:hover{filter:brightness(1.12)}
   <div class="card result">
     <div class="big" id="resultEmoji"></div>
     <h1 id="resultTitle"></h1>
+
+    <div class="result-score" id="resultScore"></div>
+
+    <div class="summary">
+      <div class="summary-box">
+        🔥 Combo
+        <strong id="resultCombo">0</strong>
+      </div>
+
+      <div class="summary-box">
+        💎 Récompense
+        <strong id="resultReward">0</strong>
+      </div>
+
+      <div class="summary-box">
+        💰 Solde
+        <strong id="resultGems">0</strong>
+      </div>
+    </div>
+
     <p id="resultText"></p>
-    <p id="resultReward"></p>
 
     <button onclick="showHome()">🧠 Choisir un autre quiz</button>
     <button class="back" onclick="showDifficulty()">🔄 Rejouer</button>
+  </div>
+</section>
+
+<section id="historySection" class="hidden">
+  <div class="card">
+    <h2>📊 Historique</h2>
+    <div id="history"></div>
   </div>
 </section>
 
@@ -232,6 +382,8 @@ let selectedDifficulty = null;
 let session = null;
 let currentQuestion = 0;
 let score = 0;
+let combo = 0;
+let bestCombo = 0;
 let answered = false;
 
 const $ = id => document.getElementById(id);
@@ -255,18 +407,94 @@ async function api(url, options = {}) {
   return data;
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+function hideAll() {
+  ["home","difficulty","game","result","historySection"]
+    .forEach(id => $(id).classList.add("hidden"));
+}
+
+function showHome() {
+  hideAll();
+  $("home").classList.remove("hidden");
+  loadDashboard();
+}
+
+function chooseQuiz(id) {
+  selectedQuiz = quizzes.find(q => q.id === id);
+
+  if (!selectedQuiz) return;
+
+  $("difficultyTitle").textContent =
+    `${selectedQuiz.name} — Choisis ton niveau`;
+
+  const d = selectedQuiz.difficulties || {};
+
+  $("levelFacile").style.display =
+    d.facile === false ? "none" : "";
+
+  $("levelDifficile").style.display =
+    d.difficile === false ? "none" : "";
+
+  $("levelImpossible").style.display =
+    d.impossible === false ? "none" : "";
+
+  const rewards = selectedQuiz.rewards || {};
+
+  $("rewardFacile").textContent =
+    `+${Number(rewards.facile || 20).toLocaleString("fr-FR")} 💎`;
+
+  $("rewardDifficile").textContent =
+    `+${Number(rewards.difficile || 50).toLocaleString("fr-FR")} 💎`;
+
+  $("rewardImpossible").textContent =
+    `+${Number(rewards.impossible || 100).toLocaleString("fr-FR")} 💎`;
+
+  hideAll();
+  $("difficulty").classList.remove("hidden");
+}
+
+function showDifficulty() {
+  if (!selectedQuiz) {
+    showHome();
+    return;
+  }
+
+  hideAll();
+  $("difficulty").classList.remove("hidden");
+}
+
 async function loadQuizzes() {
   try {
     quizzes = await api("/api/games/quizzes");
 
+    if (!quizzes.length) {
+      $("quizList").innerHTML = `
+        <div class="card">
+          <h2>🔒 Quiz désactivés</h2>
+          <p>Les Quiz sont momentanément désactivés par l'administration.</p>
+        </div>
+      `;
+      return;
+    }
+
     $("quizList").innerHTML = quizzes.map(q => `
       <div class="card">
         <h2>${escapeHtml(q.name)}</h2>
-        <p>10 questions • 3 niveaux de difficulté</p>
+        <p>10 questions • questions et réponses mélangées à chaque partie.</p>
         <p>
-          🟢 20 💎 · 🟠 50 💎 · 🔴 100 💎
+          🟢 ${Number(q.rewards?.facile || 20).toLocaleString("fr-FR")} 💎 ·
+          🟠 ${Number(q.rewards?.difficile || 50).toLocaleString("fr-FR")} 💎 ·
+          🔴 ${Number(q.rewards?.impossible || 100).toLocaleString("fr-FR")} 💎
         </p>
-        <button onclick="chooseQuiz('${q.id}')">
+        <button onclick="chooseQuiz('${escapeHtml(q.id)}')">
           🧠 Choisir ce quiz
         </button>
       </div>
@@ -279,45 +507,6 @@ async function loadQuizzes() {
       </div>
     `;
   }
-}
-
-function escapeHtml(value) {
-  return String(value)
-    .replaceAll("&","&amp;")
-    .replaceAll("<","&lt;")
-    .replaceAll(">","&gt;")
-    .replaceAll('"',"&quot;")
-    .replaceAll("'","&#039;");
-}
-
-function hideAll() {
-  $("home").classList.add("hidden");
-  $("difficulty").classList.add("hidden");
-  $("game").classList.add("hidden");
-  $("result").classList.add("hidden");
-}
-
-function showHome() {
-  hideAll();
-  $("home").classList.remove("hidden");
-}
-
-function chooseQuiz(id) {
-  selectedQuiz = quizzes.find(q => q.id === id);
-
-  if (!selectedQuiz) return;
-
-  $("difficultyTitle").textContent =
-    `${selectedQuiz.name} — Choisis ton niveau`;
-
-  hideAll();
-  $("difficulty").classList.remove("hidden");
-}
-
-function showDifficulty() {
-  if (!selectedQuiz) return;
-  hideAll();
-  $("difficulty").classList.remove("hidden");
 }
 
 async function startQuiz(difficulty) {
@@ -337,6 +526,8 @@ async function startQuiz(difficulty) {
     session = data;
     currentQuestion = 0;
     score = 0;
+    combo = 0;
+    bestCombo = 0;
     answered = false;
 
     $("quizName").textContent =
@@ -352,7 +543,7 @@ async function startQuiz(difficulty) {
 }
 
 function renderQuestion() {
-  const q = session.questions[currentQuestion];
+  const q = session?.questions?.[currentQuestion];
 
   if (!q) return;
 
@@ -364,22 +555,34 @@ function renderQuestion() {
     `Question ${currentQuestion + 1} / ${session.totalQuestions}`;
 
   $("progress").style.width =
-    `${((currentQuestion) / session.totalQuestions) * 100}%`;
+    `${(currentQuestion / session.totalQuestions) * 100}%`;
+
+  $("liveScore").textContent = score;
+  $("liveCombo").textContent = combo;
+  $("sideCombo").textContent = combo;
+  $("sideBestCombo").textContent = bestCombo;
 
   $("answers").innerHTML = q.options.map((option,index) => `
-    <button class="answer" onclick="answerQuestion(${index})">
+    <button
+      class="answer"
+      onclick="answerQuestion(${index})"
+    >
       ${String.fromCharCode(65 + index)}. ${escapeHtml(option)}
     </button>
   `).join("");
 }
 
 async function answerQuestion(index) {
-  if (answered) return;
+  if (answered || !session) return;
 
   answered = true;
 
   const buttons =
     [...document.querySelectorAll(".answer")];
+
+  buttons.forEach(button => {
+    button.disabled = true;
+  });
 
   try {
     const result = await api("/api/games/quiz/answer", {
@@ -391,13 +594,24 @@ async function answerQuestion(index) {
     });
 
     score = result.score;
+    combo = result.combo || 0;
+    bestCombo = result.bestCombo || bestCombo;
 
-    buttons[index].classList.add(
-      result.correct ? "correct" : "wrong"
-    );
+    if (buttons[index]) {
+      buttons[index].classList.add(
+        result.correct ? "correct" : "wrong"
+      );
+    }
+
+    $("liveScore").textContent = score;
+    $("liveCombo").textContent = combo;
+    $("sideCombo").textContent = combo;
+    $("sideBestCombo").textContent = bestCombo;
 
     if (result.finished) {
-      setTimeout(() => showResult(result), 650);
+      $("progress").style.width = "100%";
+
+      setTimeout(() => showResult(result), 700);
       return;
     }
 
@@ -410,6 +624,9 @@ async function answerQuestion(index) {
   } catch(error) {
     alert(error.message);
     answered = false;
+    buttons.forEach(button => {
+      button.disabled = false;
+    });
   }
 }
 
@@ -417,25 +634,78 @@ function showResult(result) {
   hideAll();
   $("result").classList.remove("hidden");
 
-  if (result.won) {
-    $("resultEmoji").textContent = "🎉";
-    $("resultTitle").textContent = "Quiz réussi !";
-    $("resultText").textContent =
-      `Score : ${result.score}/${result.totalQuestions}`;
-    $("resultReward").innerHTML =
-      `Tu remportes <span class="gem">+${result.reward} 💎</span> !`;
-  } else {
-    $("resultEmoji").textContent = "😢";
-    $("resultTitle").textContent = "Pas cette fois !";
-    $("resultText").textContent =
-      `Score : ${result.score}/${result.totalQuestions}`;
-    $("resultReward").innerHTML =
-      `Il fallait répondre correctement aux 10 questions pour gagner les 💎.`;
+  $("resultEmoji").textContent =
+    result.won ? "🎉" : "😢";
+
+  $("resultTitle").textContent =
+    result.won ? "Quiz réussi !" : "Pas cette fois !";
+
+  $("resultScore").textContent =
+    `Score : ${result.score}/${result.totalQuestions}`;
+
+  $("resultCombo").textContent =
+    `${result.bestCombo || 0} 🔥`;
+
+  $("resultReward").innerHTML =
+    `<span class="gem">+${Number(result.reward || 0).toLocaleString("fr-FR")} 💎</span>`;
+
+  $("resultGems").textContent =
+    Number(result.gems || 0).toLocaleString("fr-FR");
+
+  $("resultText").textContent =
+    result.won
+      ? `Bravo ! Tu dépasses le minimum de 8 bonnes réponses.`
+      : `Il fallait au moins 8 bonnes réponses sur ${result.totalQuestions} pour obtenir les 💎.`;
+
+  loadDashboard();
+}
+
+async function loadDashboard() {
+  try {
+    const [leaderboard, stats] = await Promise.all([
+      api("/api/games/quiz/leaderboard"),
+      api("/api/games/quiz/stats")
+    ]);
+
+    const top = leaderboard.top || [];
+
+    $("leaderboard").innerHTML = top.length
+      ? top.map((player, index) => `
+        <div class="side-row">
+          <span>${index + 1}. ${escapeHtml(player.username)}</span>
+          <strong>💎 ${Number(player.quiz_gems || 0).toLocaleString("fr-FR")}</strong>
+        </div>
+      `).join("")
+      : "<p>Aucune partie pour le moment.</p>";
+
+    const me = leaderboard.me || {};
+
+    $("myStats").innerHTML = `
+      <div class="side-row">
+        <span>🏆 Rang</span>
+        <strong>#${me.rank || 1}</strong>
+      </div>
+      <div class="side-row">
+        <span>💎 Quiz</span>
+        <strong>${Number(me.quiz_gems || 0).toLocaleString("fr-FR")}</strong>
+      </div>
+      <div class="side-row">
+        <span>🎮 Parties</span>
+        <strong>${stats.games || 0}</strong>
+      </div>
+      <div class="side-row">
+        <span>🔥 Meilleur combo</span>
+        <strong>${stats.best_combo || 0}</strong>
+      </div>
+    `;
+  } catch(error) {
+    $("leaderboard").textContent = "Statistiques indisponibles.";
+    $("myStats").textContent = "Statistiques indisponibles.";
   }
 }
 
 loadQuizzes();
+loadDashboard();
 </script>
-
 </body>
 </html>

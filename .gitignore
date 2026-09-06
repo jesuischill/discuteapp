@@ -7,3 +7,8 @@ node_modules/
 *.bak
 *.backup
 backups-soldes/
+
+# Fichiers locaux DiscuteApp
+discuteapp.db
+*.backup*
+*.bak*
