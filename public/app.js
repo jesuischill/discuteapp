@@ -520,11 +520,7 @@ async function showUsers() {
       const button = document.createElement("button");
       button.textContent = "Envoyer une demande privée";
       button.onclick = () => sendRequest(user.id);
-
-      const trade = document.createElement("button");
-      trade.textContent = "🤝 Proposer un échange";
-      trade.onclick = () => requestTrade(user.id);
-      card.append(name, role, status, button, trade);
+      card.append(name, role, status, button);
       list.appendChild(card);
     });
   } catch (error) {
@@ -789,6 +785,317 @@ async function showGems() {
   }
 }
 
+
+async function loadDiscuteBotAdmin() {
+  const box = document.createElement("div");
+  box.className = "card";
+  box.innerHTML = `
+    <h2>🤖 Réglages de DiscuteBot</h2>
+
+    <p>
+      Modifie directement la manière dont DiscuteBot parle dans le chat public.
+    </p>
+
+    <label>🗣️ Façon de parler</label>
+    <select id="discuteBotStyle" style="width:100%;margin-bottom:10px;">
+      <option value="naturel, sympathique et concis">Naturel et sympathique</option>
+      <option value="familier, détendu et proche des utilisateurs">Familier et détendu</option>
+      <option value="drôle, léger et avec quelques petites blagues">Drôle et léger</option>
+      <option value="sérieux, posé et précis">Sérieux et précis</option>
+      <option value="très énergique, enthousiaste et positif">Énergique et enthousiaste</option>
+      <option value="très concis, direct et sans phrases inutiles">Très concis et direct</option>
+    </select>
+
+    <label>😊 Humeur</label>
+    <select id="discuteBotMood" style="width:100%;margin-bottom:10px;">
+      <option value="joyeux et amical">😄 Joyeux</option>
+      <option value="calme et posé">😌 Calme</option>
+      <option value="énergique et enthousiaste">⚡ Énergique</option>
+      <option value="curieux et intéressé">🧐 Curieux</option>
+      <option value="taquin mais toujours respectueux">😏 Taquin</option>
+      <option value="sérieux et concentré">🧠 Sérieux</option>
+    </select>
+
+    <label>✍️ Personnalité personnalisée</label>
+    <textarea
+      id="discuteBotPersonality"
+      maxlength="1500"
+      placeholder="Exemple : aime plaisanter, pose parfois une question pour relancer la discussion..."
+      style="width:100%;min-height:110px;resize:vertical;margin-bottom:10px;"
+    ></textarea>
+
+    <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <input id="discuteBotEnabled" type="checkbox">
+      🤖 DiscuteBot actif
+    </label>
+
+    <button id="saveDiscuteBotSettings">💾 Enregistrer les réglages</button>
+    <p id="discuteBotSettingsMessage"></p>
+  `;
+
+  document.getElementById("content").appendChild(box);
+
+  const style = document.getElementById("discuteBotStyle");
+  const mood = document.getElementById("discuteBotMood");
+  const personality = document.getElementById("discuteBotPersonality");
+  const enabled = document.getElementById("discuteBotEnabled");
+  const message = document.getElementById("discuteBotSettingsMessage");
+
+  try {
+    const settings = await api("/api/admin/discute-bot/settings");
+
+    style.value = settings.speaking_style || style.value;
+    mood.value = settings.mood || mood.value;
+    personality.value = settings.personality || "";
+    enabled.checked = Boolean(settings.enabled);
+  } catch (error) {
+    message.textContent = "❌ " + error.message;
+  }
+
+  document.getElementById("saveDiscuteBotSettings").onclick = async () => {
+    try {
+      const result = await api(
+        "/api/admin/discute-bot/settings",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            speaking_style: style.value,
+            mood: mood.value,
+            personality: personality.value,
+            enabled: enabled.checked
+          })
+        }
+      );
+
+      message.textContent = "✅ " + result.message;
+    } catch (error) {
+      message.textContent = "❌ " + error.message;
+    }
+  };
+}
+
+
+
+async function loadQuizAdminPanel() {
+  const existing = document.getElementById("quizAdminBox");
+
+  if (existing) {
+    existing.remove();
+  }
+
+  const box = document.createElement("div");
+  box.id = "quizAdminBox";
+  box.className = "card";
+
+  box.innerHTML = `
+    <h2>🧠 Gestion des Quiz</h2>
+
+    <p>
+      Active/désactive les Quiz, règle les récompenses et gère
+      les niveaux disponibles.
+    </p>
+
+    <label style="display:flex;gap:8px;align-items:center;margin:10px 0;">
+      <input type="checkbox" id="quizAdminEnabled">
+      <strong>Activer les Quiz</strong>
+    </label>
+
+    <h3>💎 Récompenses</h3>
+
+    <div style="display:grid;gap:8px;">
+      <label>
+        🟢 Facile
+        <input
+          id="quizRewardFacile"
+          type="number"
+          min="0"
+          max="100000"
+          style="width:100%;"
+        >
+      </label>
+
+      <label>
+        🟠 Difficile
+        <input
+          id="quizRewardDifficile"
+          type="number"
+          min="0"
+          max="100000"
+          style="width:100%;"
+        >
+      </label>
+
+      <label>
+        🔴 Impossible
+        <input
+          id="quizRewardImpossible"
+          type="number"
+          min="0"
+          max="100000"
+          style="width:100%;"
+        >
+      </label>
+    </div>
+
+    <h3>🎯 Difficultés</h3>
+
+    <div style="display:grid;gap:8px;">
+      <label>
+        <input type="checkbox" id="quizDifficultyFacile">
+        🟢 Facile
+      </label>
+
+      <label>
+        <input type="checkbox" id="quizDifficultyDifficile">
+        🟠 Difficile
+      </label>
+
+      <label>
+        <input type="checkbox" id="quizDifficultyImpossible">
+        🔴 Impossible
+      </label>
+    </div>
+
+    <button id="saveQuizAdminButton">
+      💾 Enregistrer les réglages Quiz
+    </button>
+
+    <p id="quizAdminStatus"></p>
+
+    <hr style="border-color:rgba(148,163,184,.2);margin:20px 0;">
+
+    <h3>📈 Statistiques Quiz</h3>
+    <div id="quizAdminStats">Chargement...</div>
+
+    <h3>🏆 Meilleurs joueurs</h3>
+    <div id="quizAdminPlayers">Chargement...</div>
+  `;
+
+  const target = document.getElementById("adminUsers");
+
+  if (!target) return;
+
+  target.prepend(box);
+
+  try {
+    const settings =
+      await api("/api/admin/quiz/settings");
+
+    document.getElementById("quizAdminEnabled").checked =
+      Boolean(settings.enabled);
+
+    document.getElementById("quizRewardFacile").value =
+      settings.reward_facile;
+
+    document.getElementById("quizRewardDifficile").value =
+      settings.reward_difficile;
+
+    document.getElementById("quizRewardImpossible").value =
+      settings.reward_impossible;
+
+    document.getElementById("quizDifficultyFacile").checked =
+      Boolean(settings.difficulty_facile);
+
+    document.getElementById("quizDifficultyDifficile").checked =
+      Boolean(settings.difficulty_difficile);
+
+    document.getElementById("quizDifficultyImpossible").checked =
+      Boolean(settings.difficulty_impossible);
+
+  } catch(error) {
+    document.getElementById("quizAdminStatus").textContent =
+      "❌ " + error.message;
+  }
+
+  document.getElementById("saveQuizAdminButton").onclick =
+    saveQuizAdminSettings;
+
+  await loadQuizAdminStats();
+}
+
+async function saveQuizAdminSettings() {
+  const status =
+    document.getElementById("quizAdminStatus");
+
+  try {
+    const result = await api(
+      "/api/admin/quiz/settings",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          enabled:
+            document.getElementById("quizAdminEnabled").checked,
+
+          reward_facile:
+            Number(document.getElementById("quizRewardFacile").value),
+
+          reward_difficile:
+            Number(document.getElementById("quizRewardDifficile").value),
+
+          reward_impossible:
+            Number(document.getElementById("quizRewardImpossible").value),
+
+          difficulty_facile:
+            document.getElementById("quizDifficultyFacile").checked,
+
+          difficulty_difficile:
+            document.getElementById("quizDifficultyDifficile").checked,
+
+          difficulty_impossible:
+            document.getElementById("quizDifficultyImpossible").checked
+        })
+      }
+    );
+
+    status.textContent =
+      "✅ " + result.message;
+
+  } catch(error) {
+    status.textContent =
+      "❌ " + error.message;
+  }
+}
+
+async function loadQuizAdminStats() {
+  try {
+    const data =
+      await api("/api/admin/quiz/stats");
+
+    const totals = data.totals || {};
+
+    document.getElementById("quizAdminStats").innerHTML = `
+      <div class="card">
+        🎮 Parties : <strong>${totals.games || 0}</strong><br>
+        👥 Joueurs : <strong>${totals.players || 0}</strong><br>
+        💎 Gemmes distribuées : <strong>${Number(totals.gems_given || 0).toLocaleString("fr-FR")}</strong><br>
+        🏆 Victoires : <strong>${totals.wins || 0}</strong><br>
+        📊 Score moyen : <strong>${Number(totals.average_score || 0).toFixed(2)}</strong><br>
+        🔥 Meilleur combo : <strong>${totals.best_combo || 0}</strong>
+      </div>
+    `;
+
+    document.getElementById("quizAdminPlayers").innerHTML =
+      (data.bestPlayers || []).length
+        ? data.bestPlayers.map((player, index) => `
+          <div style="padding:8px 0;border-bottom:1px solid rgba(148,163,184,.15);">
+            <strong>#${index + 1} ${escapeHtml(player.username)}</strong>
+            — 💎 ${Number(player.quiz_gems || 0).toLocaleString("fr-FR")}
+            — 🎮 ${player.games || 0}
+            — 🔥 ${player.best_combo || 0}
+          </div>
+        `).join("")
+        : "<p>Aucun joueur n'a encore joué.</p>";
+
+  } catch(error) {
+    document.getElementById("quizAdminStats").textContent =
+      "❌ " + error.message;
+
+    document.getElementById("quizAdminPlayers").textContent =
+      "❌ Impossible de charger le classement.";
+  }
+}
+
+
 async function showAdmin() {
   if (!["owner", "admin"].includes(me.role)) {
     alert("Accès refusé.");
@@ -858,6 +1165,8 @@ async function showAdmin() {
 
 
   await loadAdminUsers();
+  await loadDiscuteBotAdmin();
+  await loadQuizAdminPanel();
 
   /* 🧰 GESTION DES ARTICLES DE LA BOUTIQUE */
   if (me.username === "chilladmin") {
@@ -1961,3 +2270,5 @@ async function restoreSessionFromCookie() {
 }
 
 restoreSessionFromCookie();
+
+
