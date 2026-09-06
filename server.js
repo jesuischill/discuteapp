@@ -16,8 +16,12 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const PORT = 3000;
-const JWT_SECRET = process.env.JWT_SECRET || "CHANGE_MOI_PAR_UN_VRAI_SECRET";
+const PORT = Number(process.env.PORT) || 3000;
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET manquant dans les variables d'environnement.");
+}
 
 
 const db = new Database("discuteapp.db");
@@ -67,6 +71,20 @@ try {
   console.log("✅ Rôle owner appliqué à chilladmin");
 } catch (error) {
   console.error("⚠️ Migration admin:", error.message);
+}
+
+
+// ==================== MIGRATION COMPTE PROPRIETAIRE ====================
+try {
+  db.prepare(`
+    UPDATE users
+    SET role = 'owner'
+    WHERE username = 'chilladmin'
+  `).run();
+
+  console.log("✅ Compte chilladmin vérifié comme owner");
+} catch (error) {
+  console.error("⚠️ Migration chilladmin :", error.message);
 }
 
 // ==================== QUIZ GEMMES ====================

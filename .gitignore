@@ -12,3 +12,12 @@ backups-soldes/
 discuteapp.db
 *.backup*
 *.bak*
+
+# Données locales et sauvegardes
+discuteapp.db
+*.db
+*.db-*
+*.bak
+*.backup*
+*.bak-*
+backup-avant-nettoyage-*/
