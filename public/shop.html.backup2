@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🛍️ Boutique - DiscuteApp</title>
+  <link rel="stylesheet" href="/style.css">
+
+<style>
+/* ===== FOND BOUTIQUE VIP ===== */
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background:
+        radial-gradient(circle at 15% 20%, rgba(34,197,94,.20), transparent 25%),
+        radial-gradient(circle at 85% 15%, rgba(250,204,21,.16), transparent 25%),
+        radial-gradient(circle at 50% 90%, rgba(16,185,129,.14), transparent 30%),
+        linear-gradient(135deg, #03130b, #061c12 45%, #020806);
+    background-attachment: fixed;
+    color: white;
+    overflow-x: hidden;
+}
+
+body::before,
+body::after {
+    content: "";
+    position: fixed;
+    width: 350px;
+    height: 350px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: -1;
+    filter: blur(80px);
+    animation: floatingLight 7s ease-in-out infinite alternate;
+}
+
+body::before {
+    top: 5%;
+    left: -120px;
+    background: rgba(34,197,94,.18);
+}
+
+body::after {
+    bottom: 0;
+    right: -120px;
+    background: rgba(250,204,21,.14);
+    animation-delay: -3s;
+}
+
+@keyframes floatingLight {
+    from {
+        transform: translateY(-20px) scale(1);
+    }
+    to {
+        transform: translateY(30px) scale(1.15);
+    }
+}
+
+/* ===== DIAMANTS VERTS ===== */
+
+.shop-diamond {
+    position: fixed;
+    font-size: 32px;
+    color: #22c55e;
+    text-shadow:
+        0 0 5px #22c55e,
+        0 0 15px #22c55e,
+        0 0 30px #16a34a;
+    opacity: .65;
+    pointer-events: none;
+    animation: diamondFloat 6s ease-in-out infinite;
+    z-index: -1;
+}
+
+@keyframes diamondFloat {
+    0%, 100% {
+        transform: translateY(0) rotate(0deg);
+        opacity: .35;
+    }
+    50% {
+        transform: translateY(-35px) rotate(12deg);
+        opacity: .9;
+    }
+}
+
+/* ===== ARGENT DORÉ ===== */
+
+.shop-money {
+    position: fixed;
+    font-size: 28px;
+    color: #facc15;
+    text-shadow:
+        0 0 5px #facc15,
+        0 0 15px #eab308,
+        0 0 30px rgba(250,204,21,.8);
+    opacity: .55;
+    pointer-events: none;
+    animation: moneyFloat 8s ease-in-out infinite;
+    z-index: -1;
+}
+
+@keyframes moneyFloat {
+    0%, 100% {
+        transform: translateY(0) rotate(-5deg);
+    }
+    50% {
+        transform: translateY(-45px) rotate(8deg);
+    }
+}
+
+/* ===== CARTES ARTICLES ===== */
+
+.shop-item,
+.product-card {
+    background: linear-gradient(
+        145deg,
+        rgba(255,255,255,.08),
+        rgba(255,255,255,.025)
+    );
+    border: 1px solid rgba(34,197,94,.35);
+    border-radius: 20px;
+    box-shadow:
+        0 0 25px rgba(34,197,94,.08),
+        inset 0 1px rgba(255,255,255,.08);
+    backdrop-filter: blur(12px);
+    transition: .3s ease;
+}
+
+.shop-item:hover,
+.product-card:hover {
+    transform: translateY(-7px);
+    border-color: #22c55e;
+    box-shadow:
+        0 0 20px rgba(34,197,94,.3),
+        0 0 50px rgba(34,197,94,.12),
+        inset 0 1px rgba(255,255,255,.12);
+}
+
+.shop-price {
+    color: #22c55e;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(34,197,94,.8);
+}
+
+.shop-price.gold {
+    color: #facc15;
+    text-shadow:
+        0 0 8px rgba(250,204,21,.8),
+        0 0 20px rgba(250,204,21,.4);
+}
+</style>
+
+</head>
+<body>
+
+<!-- Décoration boutique -->
+<div class="shop-diamond" style="top:12%;left:8%;">💎</div>
+<div class="shop-diamond" style="top:35%;right:10%;animation-delay:-2s;">💎</div>
+<div class="shop-diamond" style="top:70%;left:5%;animation-delay:-4s;">💎</div>
+<div class="shop-diamond" style="bottom:8%;right:18%;animation-delay:-1s;">💎</div>
+
+<div class="shop-money" style="top:20%;right:25%;">💵</div>
+<div class="shop-money" style="top:55%;left:15%;animation-delay:-3s;">💰</div>
+<div class="shop-money" style="bottom:15%;right:7%;animation-delay:-5s;">💵</div>
+
+  <main class="shop-container">
+    <div class="shop-header">
+      <div>
+        <h1>🛍️ Boutique</h1>
+        <p>Achète des objets pour personnaliser ton profil.</p>
+      </div>
+      <div class="shop-gems">💎 <span id="gems">0</span></div>
+    </div>
+
+    <p id="shopMessage"></p>
+
+    <h2>Objets disponibles</h2>
+    <div id="shopItems" class="shop-grid"></div>
+
+    <h2>🎒 Mon inventaire</h2>
+    
+  </main>
+
+  <script>
+    let currentUser = null;
+
+    async function api(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur.");
+      }
+
+      return data;
+    }
+
+    function message(text, error = false) {
+      const element = document.getElementById("shopMessage");
+      element.textContent = text;
+      element.className = error ? "shop-error" : "shop-success";
+    }
+
+    async function loadUser() {
+      const data = await api("/api/me");
+      currentUser = data.user;
+      document.getElementById("gems").textContent = currentUser.gems;
+    }
+
+    async function loadShop() {
+      const data = await api("/api/shop/items");
+      const container = document.getElementById("shopItems");
+      container.innerHTML = "";
+
+      data.items.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "shop-card";
+
+        const icon = document.createElement("div");
+        icon.className = "shop-icon";
+        icon.textContent = item.item_data.badge || item.item_data.title || "🎁";
+
+        const title = document.createElement("h3");
+        title.textContent = item.name;
+
+        const description = document.createElement("p");
+        description.textContent = item.description;
+
+        const price = document.createElement("strong");
+        price.textContent = "💎 " + item.price;
+
+        const button = document.createElement("button");
+        button.textContent = "Acheter";
+        button.onclick = () => buyItem(item.id);
+
+        card.append(icon, title, description, price, button);
+        container.appendChild(card);
+      });
+    }
+
+    async function {
+      const data = await api("/api/shop/inventory");
+      const container = document.getElementById("inventory");
+      container.innerHTML = "";
+
+      if (!data.items.length) {
+        container.innerHTML = "<p>Ton inventaire est vide.</p>";
+        return;
+      }
+
+      data.items.forEach(item => {
+        const card = document.createElement("article");
+        card.className = "shop-card";
+
+        const icon = document.createElement("div");
+        icon.className = "shop-icon";
+        icon.textContent = item.item_data.badge || item.item_data.title || "🎁";
+
+        const title = document.createElement("h3");
+        title.textContent = item.name;
+
+        const button = document.createElement("button");
+        button.textContent = item.equipped ? "Déséquiper" : "Équiper";
+
+        button.onclick = async () => {
+          try {
+            await api(
+              item.equipped ? "/api/shop/unequip" : "/api/shop/equip",
+              {
+                method: "POST",
+                body: JSON.stringify({ itemId: item.id })
+              }
+            );
+
+            message(item.equipped ? "Objet déséquipé." : "Objet équipé.");
+            await
+          } catch (error) {
+            message(error.message, true);
+          }
+        };
+
+        card.append(icon, title, button);
+        container.appendChild(card);
+      });
+    }
+
+    async function buyItem(itemId) {
+      try {
+        const data = await api("/api/shop/buy", {
+          method: "POST",
+          body: JSON.stringify({ itemId })
+        });
+
+        currentUser = data.user;
+        document.getElementById("gems").textContent = currentUser.gems;
+
+        message("Objet acheté avec succès !");
+        await
+        await loadShop();
+      } catch (error) {
+        message(error.message, true);
+      }
+    }
+
+    async function start() {
+      try {
+        await loadUser();
+        await loadShop();
+        await
+      } catch {
+        document.body.innerHTML = `
+          <main class="shop-container">
+            <h1>🔒 Connexion requise</h1>
+            <p>Connecte-toi sur DiscuteApp avant d'ouvrir la boutique.</p>
+            <button onclick="window.close()">Fermer</button>
+          </main>
+        `;
+      }
+    }
+
+    start();
+  </script>
+</body>
+</html>

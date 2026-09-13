@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DiscuteApp</title>
+  <link rel="stylesheet" href="/style.css">
+
+<style>
+
+
+.gems-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.gems-balance {
+  color: #facc15;
+  font-size: 30px;
+  font-weight: bold;
+}
+
+.gems-subtitle {
+  color: #cbd5e1;
+  font-size: 12px;
+  margin-top: 8px;
+}
+
+/* DiscuteBot caché avant connexion */
+button[onclick*="discutebot.html"] {
+  display: none !important;
+}
+
+.account-panel.app-mode button[onclick*="discutebot.html"] {
+  display: block !important;
+}
+
+
+/* ===== AUCUN BOUTON DE L'APPLICATION AVANT CONNEXION ===== */
+.account-panel.login-mode > button {
+  display: none !important;
+}
+
+.account-panel.login-mode #auth .buttons button {
+  display: inline-block !important;
+}
+
+.account-panel.app-mode > button {
+  display: block !important;
+}
+
+</style>
+
+
+<style>
+
+/* ===== ÉCRAN D'AUTHENTIFICATION ===== */
+
+body.auth-screen {
+  overflow: hidden;
+}
+
+body.auth-screen #mainAccountPanel {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  width: 100% !important;
+  min-height: 100vh !important;
+  margin: 0 !important;
+  padding: 30px 20px !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background:
+    linear-gradient(rgba(3,10,18,.48), rgba(3,10,18,.58)),
+    radial-gradient(ellipse at 50% 100%, rgba(255,166,80,.30), transparent 45%),
+    linear-gradient(180deg, #172c4a 0%, #315d78 45%, #d88965 100%);
+}
+
+body.auth-screen #auth {
+  width: min(460px, 92vw);
+  margin: 0 !important;
+  background: rgba(8,12,20,.95);
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.50);
+}
+
+body.auth-screen #account,
+body.auth-screen .app-controls-hidden {
+  visibility: hidden !important;
+}
+
+/* ===== FIN ÉCRAN D'AUTHENTIFICATION ===== */
+
+/* ===== STYLE SIMPLE ===== */
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow-x: hidden;
+  color: #fff;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(255,166,80,.28), transparent 42%),
+    radial-gradient(ellipse at 15% 70%, rgba(30,140,170,.24), transparent 38%),
+    radial-gradient(ellipse at 85% 65%, rgba(20,110,145,.22), transparent 38%),
+    linear-gradient(180deg, #172c4a 0%, #315d78 38%, #d88965 72%, #182f38 100%);
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  left: -10%;
+  bottom: 5%;
+  width: 120%;
+  height: 180px;
+  background:
+    radial-gradient(ellipse at 50% 100%,
+      rgba(100,210,220,.20) 0%,
+      rgba(30,120,150,.12) 45%,
+      transparent 70%);
+  border-radius: 50%;
+  transform: rotate(-2deg);
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  left: -10%;
+  bottom: -5%;
+  width: 120%;
+  height: 220px;
+  background:
+    radial-gradient(ellipse at 50% 0%,
+      rgba(15,70,75,.30) 0%,
+      transparent 68%);
+  border-radius: 50%;
+  transform: rotate(2deg);
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  left: -10%;
+  width: 120%;
+  height: 180px;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: -1;
+}
+
+body::before {
+  bottom: 8%;
+  background: rgba(59,130,246,.07);
+  transform: rotate(-3deg);
+}
+
+body::after {
+  bottom: -2%;
+  background: rgba(124,58,237,.06);
+  transform: rotate(4deg);
+}
+
+.account-panel.login-mode {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 30px 20px;
+  box-sizing: border-box;
+}
+
+.login-home-title {
+  display: none;
+}
+
+#auth {
+  width: min(460px, 92vw);
+  padding: 28px;
+  box-sizing: border-box;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+}
+
+#auth input {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 7px 0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #000;
+  color: white;
+  outline: none;
+  font-size: 16px;
+}
+
+#auth .buttons {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  flex-wrap: nowrap;
+}
+
+#auth .buttons button {
+  border: 1px solid #444;
+  border-radius: 8px;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-weight: 700;
+  color: white;
+  background: #222;
+}
+
+.account-panel.app-mode {
+  min-height: auto;
+  display: block;
+  padding: initial;
+}
+
+.app-controls-hidden {
+  display: none !important;
+}
+
+/* Boutons principaux : alignés à droite */
+.account-panel.app-mode {
+  text-align: center;
+  width: 250px;
+  box-sizing: border-box;
+}
+
+.account-panel.app-mode > button {
+  display: block;
+  width: 220px !important;
+  margin: 8px auto !important;
+}
+
+.account-panel.app-mode #adminButton {
+  display: block;
+  width: 220px !important;
+  margin: 8px auto !important;
+}
+</style>
+
+</head>
+<body>
+
+
+  <main class="layout">
+    <section class="account-panel login-mode" id="mainAccountPanel">
+      <div class="login-home-title">
+        <h1>💬 DISCUTEAPP</h1>
+        <p>🎉 Street • Disco • Fête • Chat 🎉</p>
+      </div>
+
+      <section id="auth">
+        <input id="username" placeholder="Nom d'utilisateur">
+        <input id="password" type="password" placeholder="Mot de passe">
+
+        <div class="buttons">
+          <button onclick="register()">Créer un compte</button>
+          <button onclick="login()">Se connecter</button>
+        </div>
+
+        <p id="message"></p>
+      </section>
+
+      <section id="account" class="hidden">
+        <h2>Bienvenue, <span id="userName"></span> 👋</h2>
+        <p>💎 <span id="userGems">0</span></p>
+        <button onclick="logout()">Déconnexion</button>
+      </section>
+
+      
+      
+
+<button class="app-controls-hidden" class="chat-button" onclick="openChat()">
+        💬 Chat public
+      </button>
+
+      <button class="app-controls-hidden" class="directory-button" onclick="openDirectory()">
+        📇 Annuaire
+      </button>
+
+      
+      <button class="app-controls-hidden" id="gemsButton" class="shop-button" onclick="toggleGems()">
+        💎 Gemmes : <span id="gemsButtonCount">0</span>
+      </button>
+      <section id="gemsPanel" class="side-panel" style="display:none;">
+      <h2>💎 Mes gemmes</h2>
+      <div class="gems-balance">
+        <span id="gemsCount">0</span> 💎
+      </div>
+      <p>Ton solde actuel</p>
+    </section>
+
+<button class="app-controls-hidden" class="shop-button" onclick="openShop()">
+        🛍️ Boutique
+      </button>
+
+      <button class="app-controls-hidden" class="shop-button" onclick="toggleInventory()">
+        🎒 Inventaire
+      </button>
+      <button
+  class="shop-button"
+  onclick="window.open('/discutebot.html', '_blank')"
+>
+  🤖 Discutebot
+</button>
+
+<button class="app-controls-hidden" class="shop-button" onclick="openGame()">
+        🎮 Jeux
+      </button>
+
+<button
+  id="adminButton"
+  class="hidden app-controls-hidden"
+  onclick="window.open('/admin.html', '_blank')"
+  style="
+    width: 100%;
+    background: linear-gradient(135deg, #facc15, #f59e0b);
+    color: #111827;
+    border: none;
+    border-radius: 10px;
+    padding: 12px;
+    margin-top: 10px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 0 15px rgba(250, 204, 21, .35);
+  "
+>
+  🛡️ Admin
+</button>
+    </section>
+
+    <section id="inventoryPanel" class="chat-panel hidden">
+  <h2>🎒 Mon inventaire</h2>
+  <div id="inventoryItems">Chargement...</div>
+</section>
+
+<section id="directoryPanel" class="directory-panel hidden">
+      <div class="chat-header">
+        <h2>📇 Annuaire</h2>
+        <button onclick="closeDirectory()">✕</button>
+      </div>
+
+      <form id="directoryForm" class="directory-form">
+        <input id="directoryTitle" maxlength="100" placeholder="Titre de la publication">
+        <textarea id="directoryContent" maxlength="2000" placeholder="Présente ton activité, ton projet ou ton annonce..."></textarea>
+        <button type="submit">Publier</button>
+      </form>
+
+      <p id="directoryError" class="chat-error"></p>
+      <div id="directoryPosts" class="directory-posts">
+        <p class="empty-chat">Chargement de l’annuaire...</p>
+      </div>
+    </section>
+
+    <section id="chatPanel" class="chat-panel hidden">
+      <div class="chat-header">
+        <h2>💬 Chat public</h2>
+        <button onclick="closeChat()">✕</button>
+      </div>
+
+      <div id="chatMessages" class="chat-messages">
+        <p class="empty-chat">Chargement des messages...</p>
+      </div>
+
+      <form id="chatForm" class="chat-form">
+        <input
+          id="chatInput"
+          maxlength="500"
+          placeholder="Écris un message..."
+          autocomplete="off"
+        >
+
+        <div class="emoji-picker-wrapper">
+          <button
+            type="button"
+            id="emojiButton"
+            class="emoji-button"
+            onclick="toggleEmojiPicker()"
+            title="Emojis"
+          >😀</button>
+
+          <div id="emojiPicker" class="emoji-picker hidden">
+            <div class="emoji-picker-header">
+              <strong>😀 Emojis</strong>
+              <button
+                type="button"
+                class="emoji-close"
+                onclick="closeEmojiPicker()"
+              >✕</button>
+            </div>
+
+            <div id="emojiLocked" class="emoji-locked hidden">
+              🔒<br>
+              <strong>Pack Emoji requis</strong>
+              <p>🛍️ Achète le Pack Emoji dans la boutique pour utiliser les emojis.</p>
+              <button
+                type="button"
+                onclick="openShop()"
+              >🛍️ Ouvrir la boutique</button>
+            </div>
+
+            <div id="emojiGrid" class="emoji-grid"></div>
+          </div>
+        </div>
+
+        <button type="submit">Envoyer</button>
+      </form>
+
+      <p id="chatError" class="chat-error"></p>
+    </section>
+  
+    
+
+</main>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    function openGame() {
+      window.location.href = "/game.html";
+    }
+  </script>
+
+  <script>
+    let currentUser = null;
+    let socket = null;
+
+    async function api(url, options = {}) {
+      const response = await fetch(url, {
+        ...options,
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(options.headers || {})
+        }
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Erreur.");
+      }
+
+      return data;
+    }
+
+    function showMessage(text) {
+      document.getElementById("message").textContent = text;
+    }
+
+    async function register() {
+      try {
+        await api("/api/register", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+          })
+        });
+
+        await loadUser();
+      } catch (error) {
+        showMessage(error.message);
+      }
+    }
+
+    async function login() {
+      try {
+        await api("/api/login", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("username").value,
+            password: document.getElementById("password").value
+          })
+        });
+
+        await loadUser();
+      } catch (error) {
+        showMessage(error.message);
+      }
+    }
+
+
+    function setLoggedInUI(loggedIn) {
+      document.body.classList.toggle("auth-screen", !loggedIn);
+
+      const panel = document.getElementById("mainAccountPanel");
+      const auth = document.getElementById("auth");
+      const account = document.getElementById("account");
+      const controls = document.querySelectorAll(".app-controls-hidden");
+
+      if (loggedIn) {
+        panel.classList.remove("login-mode");
+        panel.classList.add("app-mode");
+
+        auth.classList.add("hidden");
+        account.classList.remove("hidden");
+
+        controls.forEach(el => {
+          if (el.id !== "adminButton") {
+            el.classList.remove("app-controls-hidden");
+          }
+        });
+      } else {
+        panel.classList.add("login-mode");
+        panel.classList.remove("app-mode");
+
+        auth.classList.remove("hidden");
+        account.classList.add("hidden");
+
+        controls.forEach(el => {
+          el.classList.add("app-controls-hidden");
+        });
+
+        const admin = document.getElementById("adminButton");
+        if (admin) {
+          admin.classList.add("hidden");
+          admin.classList.add("app-controls-hidden");
+          admin.style.display = "none";
+        }
+      }
+    }
+
+    async function logout() {
+      await api("/api/logout", { method: "POST" });
+
+      currentUser = null;
+
+      setLoggedInUI(false);
+      closeChat();
+    }
+
+    async function loadUser() {
+      try {
+        const data = await api("/api/me");
+
+        currentUser = data.user;
+
+        setLoggedInUI(true);
+        document.getElementById("userName").textContent = data.user.username;
+        document.getElementById("userGems").textContent = data.user.gems;
+
+        const adminButton = document.getElementById("adminButton");
+        if (adminButton && (
+          data.user.username === "chilladmin" ||
+          Number(data.user.admin_panel) === 1 ||
+          data.user.role === "owner"
+        )) {
+          adminButton.classList.remove("hidden");
+          adminButton.classList.remove("app-controls-hidden");
+          adminButton.style.display = "inline-block";
+        }
+      } catch {
+        currentUser = null;
+        setLoggedInUI(false);
+      }
+    }
+
+    async function openDirectory() {
+      document.getElementById("chatPanel").classList.add("hidden");
+      document.getElementById("directoryPanel").classList.remove("hidden");
+      await loadDirectory();
+    }
+
+    function closeDirectory() {
+      document.getElementById("directoryPanel").classList.add("hidden");
+    }
+
+    async function openInventory() {
+  window.open("/inventory.html", "_blank");
+  return;
+
+  document.getElementById("chatPanel").classList.add("hidden");
+  document.getElementById("directoryPanel").classList.add("hidden");
+
+  const panel = document.getElementById("inventoryPanel");
+  panel.classList.remove("hidden");
+
+  const box = document.getElementById("inventoryItems");
+  box.textContent = "Chargement...";
+
+  try {
+    const response = await fetch("/api/shop/inventory", {
+      credentials: "include"
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      box.textContent = data.error || "Impossible de charger l’inventaire.";
+      return;
+    }
+
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    if (!items.length) {
+      box.textContent = "Ton inventaire est vide.";
+      return;
+    }
+
+    box.innerHTML = items.map(item => `
+      <div class="inventory-item">
+        <strong>${item.emoji || "🎁"} ${item.name}</strong>
+        <p>${item.description || ""}</p>
+        <button onclick="toggleInventoryItem(${item.id}, ${item.equipped ? 0 : 1})">
+          ${item.equipped ? "Retirer" : "Équiper"}
+        </button>
+      </div>
+    `).join("");
+  } catch (error) {
+    box.textContent = "Erreur de connexion.";
+  }
+}
+
+function toggleInventory() {
+  if (!currentUser) {
+    alert("Connecte-toi pour ouvrir ton inventaire.");
+    return;
+  }
+
+  const panel = document.getElementById("inventoryPanel");
+
+  if (panel.classList.contains("hidden")) {
+    openInventory();
+  } else {
+    panel.classList.add("hidden");
+  }
+}
+
+async function toggleInventoryItem(itemId, equipped) {
+  const response = await fetch("/api/shop/equip", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    credentials: "include",
+    body: JSON.stringify({ itemId, equipped })
+  });
+
+  if (response.ok) {
+    openInventory();
+  }
+}
+
+function openShop() {
+      if (!currentUser) {
+        alert("Connecte-toi pour ouvrir la boutique.");
+        return;
+      }
+
+      window.open("/shop.html", "_blank");
+    }
+
+    async function loadDirectory() {
+      try {
+        const data = await api("/api/directory");
+        const container = document.getElementById("directoryPosts");
+        container.innerHTML = "";
+
+        if (!data.posts.length) {
+          container.innerHTML = '<p class="empty-chat">Aucune publication pour le moment.</p>';
+          return;
+        }
+
+        data.posts.forEach(post => {
+          const article = document.createElement("article");
+          article.className = "directory-post";
+
+          const title = document.createElement("h3");
+          title.textContent = post.title;
+
+          const author = document.createElement("small");
+          author.textContent = "Publié par " + post.username;
+
+          const content = document.createElement("p");
+          content.textContent = post.content;
+
+          article.appendChild(title);
+          article.appendChild(author);
+          article.appendChild(content);
+
+          if (currentUser && (
+            currentUser.id === post.user_id ||
+            ["owner", "admin"].includes(currentUser.role)
+          )) {
+            const deleteButton = document.createElement("button");
+            deleteButton.textContent = "Supprimer";
+            deleteButton.className = "delete-button";
+            deleteButton.onclick = () => deleteDirectoryPost(post.id);
+            article.appendChild(deleteButton);
+          }
+
+          container.appendChild(article);
+        });
+      } catch (error) {
+        document.getElementById("directoryError").textContent = error.message;
+      }
+    }
+
+    async function deleteDirectoryPost(id) {
+      if (!confirm("Supprimer cette publication ?")) return;
+
+      try {
+        await api("/api/directory/" + id, {
+          method: "DELETE"
+        });
+
+        await loadDirectory();
+      } catch (error) {
+        document.getElementById("directoryError").textContent = error.message;
+      }
+    }
+
+    document.getElementById("directoryForm").addEventListener("submit", async event => {
+      event.preventDefault();
+
+      if (!currentUser) {
+        document.getElementById("directoryError").textContent =
+          "Connecte-toi pour publier.";
+        return;
+      }
+
+      try {
+        await api("/api/directory", {
+          method: "POST",
+          body: JSON.stringify({
+            title: document.getElementById("directoryTitle").value,
+            content: document.getElementById("directoryContent").value
+          })
+        });
+
+        document.getElementById("directoryTitle").value = "";
+        document.getElementById("directoryContent").value = "";
+        await loadDirectory();
+      } catch (error) {
+        document.getElementById("directoryError").textContent = error.message;
+      }
+    });
+
+
+    document.getElementById("chatForm").addEventListener("submit", event => {
+      event.preventDefault();
+
+      if (!currentUser) {
+        alert("Connecte-toi pour utiliser le chat public.");
+        return;
+      }
+
+      const input = document.getElementById("chatInput");
+      const content = input.value.trim();
+
+      if (!content) return;
+
+      if (!socket) {
+        openChat();
+      }
+
+      if (!socket) {
+        document.getElementById("chatError").textContent =
+          "Impossible de se connecter au chat.";
+        return;
+      }
+
+      if (!socket.connected) {
+        document.getElementById("chatError").textContent =
+          "Connexion au chat en cours...";
+        socket.connect();
+        return;
+      }
+
+      socket.emit("chat:message", { content });
+
+      input.value = "";
+      document.getElementById("chatError").textContent = "";
+      input.focus();
+    });
+
+    function openChat() {
+      if (!currentUser) {
+        alert("Connecte-toi pour utiliser le chat public.");
+        return;
+      }
+
+      document.getElementById("directoryPanel").classList.add("hidden");
+      document.getElementById("chatPanel").classList.remove("hidden");
+
+      if (!socket) {
+        socket = io({
+          auth: {
+            token: null
+          }
+        });
+
+        /*
+          Le serveur utilise un cookie httpOnly.
+          Socket.IO envoie automatiquement le cookie
+          puisque la connexion est sur le même domaine.
+        */
+
+        socket.on("connect", () => {
+          socket.emit("chat:load");
+        });
+
+        socket.on("chat:history", (messages) => {
+          const container = document.getElementById("chatMessages");
+          container.innerHTML = "";
+
+          messages.forEach(addMessage);
+          scrollChat();
+        });
+
+        socket.on("chat:message", (message) => {
+          addMessage(message);
+          scrollChat();
+        });
+
+        socket.on("chat:error", (error) => {
+          document.getElementById("chatError").textContent = error;
+        });
+
+        socket.on("chat:message_deleted", ({ id }) => {
+          document.querySelectorAll("#chatMessages [data-message-id]").forEach((element) => {
+            if (String(element.dataset.messageId) === String(id)) {
+              element.remove();
+            }
+          });
+        });
+      }
+    }
+
+    function closeChat() {
+      document.getElementById("chatPanel").classList.add("hidden");
+    }
+
+    function addMessage(message) {
+  const container = document.getElementById("chatMessages");
+  const empty = container.querySelector(".empty-chat");
+  if (empty) empty.remove();
+
+  const row = document.createElement("div");
+  row.className = "chat-message";
+  row.dataset.messageId = message.id;
+
+  const customization = message.customization || {};
+  const avatar = customization.avatar || {};
+  const title = customization.title || {};
+  const textColor = customization.text_color || {};
+  const textEffect = customization.text_effect || {};
+
+  // ===== IMAGE / EMOJI À CÔTÉ DU PSEUDO =====
+  if (avatar.src || avatar.emoji) {
+    const image = document.createElement(avatar.src ? "img" : "span");
+
+    if (avatar.src) {
+      image.src = avatar.src;
+      image.alt = "";
+    } else {
+      image.textContent = avatar.emoji;
+    }
+
+    image.className =
+      "chat-avatar " + (avatar.className || "");
+
+    row.appendChild(image);
+  }
+
+  // ===== PSEUDO =====
+  const name = document.createElement("strong");
+  name.textContent = message.username;
+  name.className = "chat-username";
+
+  if (textColor.color) {
+    name.style.color = textColor.color;
+  }
+
+  if (textEffect.effect === "rainbow-wave") {
+    name.classList.add("rainbow-wave");
+  }
+
+  if (textColor.effect === "gold-wave") {
+    name.classList.add("gold-wave");
+  }
+
+  row.appendChild(name);
+
+  // ===== TITRE =====
+  if (title.text) {
+    const titleSpan = document.createElement("span");
+    titleSpan.textContent = " [" + title.text + "]";
+    titleSpan.className =
+      "chat-title " + (title.className || "");
+    row.appendChild(titleSpan);
+  }
+
+  // ===== DEUX-POINTS =====
+  const separator = document.createElement("span");
+  separator.textContent = " : ";
+  row.appendChild(separator);
+
+  // ===== MESSAGE =====
+  const text = document.createElement("span");
+
+  /*
+   * Chaque caractère/emoji est traité séparément.
+   * Les emojis gardent leur apparence originale.
+   * Les accessoires sont appliqués uniquement aux lettres.
+   */
+  const segmenter = new Intl.Segmenter("fr", {
+    granularity: "grapheme"
+  });
+
+  for (const part of segmenter.segment(String(message.content || ""))) {
+    const segment = part.segment;
+
+    const isEmoji =
+      /\p{Extended_Pictographic}/u.test(segment) ||
+      /\p{Emoji_Presentation}/u.test(segment);
+
+    const span = document.createElement("span");
+    span.textContent = segment;
+
+    if (!isEmoji) {
+      if (textColor.color) {
+        span.style.color = textColor.color;
+      }
+
+      if (textEffect.effect === "rainbow-wave") {
+        span.classList.add("rainbow-wave");
+      }
+
+      if (textColor.effect === "gold-wave") {
+        span.classList.add("gold-wave");
+      }
+    }
+
+    text.appendChild(span);
+  }
+
+  row.appendChild(text);
+  container.appendChild(row);
+}
+
+
+function scrollChat() {
+  const container = document.getElementById("chatMessages");
+  if (!container) return;
+
+  container.scrollTop = container.scrollHeight;
+}
+
+
+const CHAT_EMOJIS = [
+  "😀","😃","😄","😁","😆","😅","😂","🤣",
+  "😊","😇","🙂","🙃","😉","😌","😍","🥰",
+  "😘","😎","🤩","🥳","🤔","🤨","😐","😑",
+  "😶","🙄","😏","😣","😥","😮","🤐","😯",
+  "😪","😫","🥱","😴","🤓","😛","😜","😝",
+  "🤤","😋","🤗","🤭","🫡","🤫","🫠","😱",
+  "😨","😰","😢","😭","😡","🤬","😈","👿",
+  "💀","☠️","👻","👽","🤖","🎃","😺","😸",
+  "😹","😻","😼","😽","🙀","😿","😾","❤️",
+  "🧡","💛","💚","💙","💜","🖤","🤍","🤎",
+  "💔","🔥","✨","⭐","🌟","💎","👑","🎮",
+  "🎁","🚀","🍀","🎉","💯"
+];
+
+let emojiPackOwned = false;
+let emojiPickerLoaded = false;
+
+
+function buildEmojiGrid() {
+  const grid = document.getElementById("emojiGrid");
+
+  if (!grid || emojiPickerLoaded) return;
+
+  grid.innerHTML = CHAT_EMOJIS.map(emoji => `
+    <button
+      type="button"
+      class="emoji-item"
+      onclick="insertChatEmoji('${emoji}')"
+      title="${emoji}"
+    >${emoji}</button>
+  `).join("");
+
+  emojiPickerLoaded = true;
+}
+
+
+async function checkEmojiPack() {
+  try {
+    const response = await fetch("/api/shop/inventory", {
+      credentials: "include"
+    });
+
+    if (!response.ok) {
+      emojiPackOwned = false;
+      return false;
+    }
+
+    const data = await response.json();
+    const items = Array.isArray(data.items) ? data.items : [];
+
+    emojiPackOwned = items.some(item => {
+      const name = String(item.name || "").toLowerCase();
+      const itemType = String(item.item_type || "").toLowerCase();
+
+      return (
+        itemType === "emoji_pack" ||
+        name.includes("pack emoji") ||
+        Number(item.id) === 64
+      );
+    });
+
+    return emojiPackOwned;
+
+  } catch (error) {
+    emojiPackOwned = false;
+    return false;
+  }
+}
+
+
+async function toggleEmojiPicker() {
+  const picker = document.getElementById("emojiPicker");
+
+  if (!picker) return;
+
+  if (!picker.classList.contains("hidden")) {
+    closeEmojiPicker();
+    return;
+  }
+
+  buildEmojiGrid();
+  picker.classList.remove("hidden");
+
+  const owned = await checkEmojiPack();
+
+  const grid = document.getElementById("emojiGrid");
+  const locked = document.getElementById("emojiLocked");
+
+  if (!grid || !locked) return;
+
+  if (owned) {
+    grid.classList.remove("hidden");
+    locked.classList.add("hidden");
+  } else {
+    grid.classList.add("hidden");
+    locked.classList.remove("hidden");
+  }
+}
+
+
+function closeEmojiPicker() {
+  const picker = document.getElementById("emojiPicker");
+
+  if (picker) {
+    picker.classList.add("hidden");
+  }
+}
+
+
+function insertChatEmoji(emoji) {
+  if (!emojiPackOwned) {
+    alert("🛍️ Achète le Pack Emoji dans la boutique pour utiliser les emojis.");
+    return;
+  }
+
+  const input = document.getElementById("chatInput");
+
+  if (!input) return;
+
+  const start = input.selectionStart ?? input.value.length;
+  const end = input.selectionEnd ?? input.value.length;
+
+  input.value =
+    input.value.slice(0, start) +
+    emoji +
+    input.value.slice(end);
+
+  const newPosition = start + emoji.length;
+
+  input.focus();
+  input.setSelectionRange(newPosition, newPosition);
+}
+
+
+document.addEventListener("click", (event) => {
+  const wrapper = document.querySelector(".emoji-picker-wrapper");
+  const picker = document.getElementById("emojiPicker");
+
+  if (
+    wrapper &&
+    picker &&
+    !wrapper.contains(event.target)
+  ) {
+    picker.classList.add("hidden");
+  }
+});
+
+
+async function refreshGems() {
+  try {
+    const response = await fetch("/api/me", {
+      credentials: "include"
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const user = data.user ?? data;
+
+    if (!user || !user.username) return;
+
+    const gems = Number(user.gems ?? 0);
+
+    document.querySelectorAll("#gemsCount, #gemsButtonCount").forEach(element => {
+      element.textContent = gems;
+    });
+  } catch (error) {
+    console.error("Erreur de récupération des gemmes :", error);
+  }
+}
+
+
+document.addEventListener("DOMContentLoaded", () => {
+  setLoggedInUI(false);
+
+  // Aucun bouton de l'application n'est visible avant connexion.
+  document.querySelectorAll(".app-controls-hidden").forEach(el => {
+    el.classList.add("app-controls-hidden");
+  });
+  loadUser();
+  refreshGems();
+
+  // Actualise les gemmes automatiquement
+  setInterval(refreshGems, 2000);
+
+  // Actualise aussi quand on revient de la page du quiz
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      refreshGems();
+    }
+  });
+});
+</script>
+
+
+
+<script>
+async function afficherBoutonAdmin() {
+  const bouton = document.getElementById("adminButton");
+
+  if (!bouton) return;
+
+  // Toujours caché au départ : aucun bouton Admin sur connexion/inscription.
+  bouton.classList.add("hidden");
+  bouton.style.display = "none";
+
+  try {
+    const response = await fetch("/api/me", {
+      credentials: "include"
+    });
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+    const user = data.user || data;
+
+    if (user && (user.username === "chilladmin" || Number(user.admin_panel) === 1)) {
+      bouton.classList.remove("hidden");
+      bouton.style.display = "inline-block";
+    }
+  } catch (error) {
+    console.error("Impossible de vérifier le compte admin :", error);
+  }
+}
+
+document.addEventListener("DOMContentLoaded", afficherBoutonAdmin);
+</script>

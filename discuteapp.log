@@ -1,0 +1,10 @@
+nohup: les entrées sont ignorées
+
+> discuteapp@1.0.0 start
+> node server.js
+
+◇ injected env (1) from .env // tip: ⌘ override existing { override: true }
+DiscuteApp démarré : http://localhost:3000
+Utilisateur connecté à Socket.IO : AaLT54xLLWZUTMXnAAAA
+Utilisateur déconnecté : AaLT54xLLWZUTMXnAAAA
+Utilisateur connecté à Socket.IO : 7x52T5BiPZ2dZOKsAAAB

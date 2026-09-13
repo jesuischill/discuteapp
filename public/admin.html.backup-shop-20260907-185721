@@ -1,0 +1,687 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration - DiscuteApp</title>
+  <link rel="stylesheet" href="/style.css">
+
+  <style>
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 30px;
+      background: #090d18;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    .admin-wrapper {
+      max-width: 1200px;
+      margin: auto;
+    }
+
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 24px;
+      margin-bottom: 25px;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #111827, #172554);
+    }
+
+    .admin-header h1 {
+      margin: 0 0 8px;
+      color: #facc15;
+    }
+
+    .admin-header p {
+      margin: 0;
+      color: #cbd5e1;
+    }
+
+    .admin-close,
+    button {
+      padding: 10px 14px;
+      border: 0;
+      border-radius: 9px;
+      cursor: pointer;
+      background: #334155;
+      color: white;
+      font-weight: bold;
+    }
+
+    button:hover {
+      filter: brightness(1.15);
+    }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+
+    .admin-card {
+      padding: 22px;
+      border: 1px solid #334155;
+      border-radius: 16px;
+      background: #111827;
+    }
+
+    .admin-card h2 {
+      margin-top: 0;
+      color: #60a5fa;
+    }
+
+    .admin-card p {
+      color: #94a3b8;
+      line-height: 1.5;
+    }
+
+    .admin-status {
+      margin-top: 25px;
+      padding: 16px;
+      border-radius: 12px;
+      background: #172033;
+      color: #cbd5e1;
+    }
+
+    .admin-tools {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 15px 0;
+    }
+
+    .admin-tools input {
+      flex: 1;
+      min-width: 220px;
+      padding: 11px;
+      border: 1px solid #475569;
+      border-radius: 9px;
+      background: #0f172a;
+      color: white;
+      outline: none;
+    }
+
+    .users-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    .users-table th,
+    .users-table td {
+      padding: 12px 8px;
+      border-bottom: 1px solid #334155;
+      text-align: left;
+    }
+
+    .users-table th {
+      color: #facc15;
+    }
+
+    .user-banned {
+      color: #f87171;
+      font-weight: bold;
+    }
+
+    .user-ok {
+      color: #4ade80;
+      font-weight: bold;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .danger {
+      background: #991b1b;
+    }
+
+    .success {
+      background: #166534;
+    }
+
+    .blue {
+      background: #1d4ed8;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .empty {
+      padding: 20px;
+      text-align: center;
+      color: #94a3b8;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 12px;
+      }
+
+      .users-table {
+        font-size: 13px;
+      }
+
+      .users-table th:nth-child(5),
+      .users-table td:nth-child(5) {
+        display: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="admin-wrapper">
+
+    <header class="admin-header">
+      <div>
+        <h1>🛡️ Administration DiscuteApp</h1>
+        <p>Panneau réservé au compte chilladmin</p>
+      </div>
+
+      <button class="admin-close" onclick="window.close()">
+        Fermer
+      </button>
+    </header>
+
+    <section class="admin-grid">
+
+      <article class="admin-card">
+        <h2>👥 Gestion des comptes</h2>
+        <p>Rechercher et gérer les utilisateurs de DiscuteApp.</p>
+
+        <div class="admin-tools">
+          <input
+            id="userSearch"
+            type="text"
+            placeholder="🔎 Rechercher un utilisateur..."
+          >
+
+          <button class="blue" onclick="loadUsers()">
+            🔄 Actualiser
+          </button>
+        </div>
+
+        <div id="usersContainer">
+          Chargement des utilisateurs...
+        </div>
+      </article>
+
+
+      <article class="admin-card" id="chatAdminCard">
+        <h2>💬 Chat public</h2>
+        <p>Gestion des messages publics et des annonces administrateur.</p>
+
+        <div class="admin-tools">
+          <input
+            id="announcementInput"
+            type="text"
+            maxlength="500"
+            placeholder="📢 Écrire une annonce..."
+          >
+
+          <button class="blue" onclick="sendAnnouncement()">
+            📢 Publier
+          </button>
+
+          <button onclick="loadMessages()">
+            🔄 Actualiser
+          </button>
+        </div>
+
+        <div id="messagesContainer">
+          Chargement des messages...
+        </div>
+      </article>
+
+
+      <article class="admin-card">
+        <h2>🛍️ Boutique</h2>
+        <p>Gestion des objets, gemmes et réductions.</p>
+        <button onclick="alert('Section Boutique en préparation')">
+          Ouvrir la boutique
+        </button>
+      </article>
+
+
+      <article class="admin-card">
+        <h2>🤖 DiscuteBot</h2>
+        <p>Gestion du comportement et du style du DiscuteBot.</p>
+        <button onclick="alert('Section DiscuteBot en préparation')">
+          Ouvrir DiscuteBot
+        </button>
+      </article>
+
+
+      <article class="admin-card">
+        <h2>🧠 Quiz</h2>
+        <p>Créer et gérer les questions, réponses et récompenses.</p>
+        <button onclick="alert('Section Quiz en préparation')">
+          Ouvrir le gestionnaire Quiz
+        </button>
+      </article>
+
+    </section>
+
+    <div class="admin-status" id="adminStatus">
+      Vérification de l’accès administrateur…
+    </div>
+
+  </main>
+
+
+  <script>
+    async function verifyAdmin() {
+      try {
+        const response = await fetch("/api/me", {
+          credentials: "include"
+        });
+
+        if (!response.ok) {
+          window.location.href = "/";
+          return;
+        }
+
+        const data = await response.json();
+        const user = data.user;
+
+        if (!user || user.username !== "chilladmin") {
+          document.body.innerHTML = `
+            <div style="text-align:center;margin-top:100px;color:white">
+              <h1>⛔ Accès refusé</h1>
+              <p>Ce panneau est réservé à chilladmin.</p>
+              <button onclick="location.href='/'">Retour</button>
+            </div>
+          `;
+          return;
+        }
+
+        document.querySelector("#adminStatus").textContent =
+          "✅ Accès confirmé pour chilladmin.";
+
+        loadUsers();
+        loadMessages();
+
+      } catch (error) {
+        console.error(error);
+        window.location.href = "/";
+      }
+    }
+
+
+    async function sendAnnouncement() {
+      const input = document.querySelector("#announcementInput");
+      const content = input.value.trim();
+
+      if (!content) {
+        alert("❌ Écris une annonce avant de publier.");
+        return;
+      }
+
+      try {
+        const response = await fetch("/api/admin/announcement", {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ content })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur lors de la publication.");
+        }
+
+        input.value = "";
+        await loadMessages();
+
+      } catch (error) {
+        alert("❌ " + error.message);
+      }
+    }
+
+
+    async function loadMessages() {
+      const container = document.querySelector("#messagesContainer");
+
+      if (!container) return;
+
+      container.innerHTML = "⏳ Chargement...";
+
+      try {
+        const response = await fetch("/api/admin/messages", {
+          credentials: "include"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur");
+        }
+
+        if (!data.messages || data.messages.length === 0) {
+          container.innerHTML =
+            '<div class="empty">Aucun message.</div>';
+          return;
+        }
+
+        container.innerHTML = data.messages.map(message => {
+          const isAnnouncement =
+            message.username === "📢 Annonce de l'admin";
+
+          return `
+            <div style="
+              padding:12px;
+              margin:8px 0;
+              border:1px solid ${isAnnouncement ? "#a16207" : "#334155"};
+              border-radius:10px;
+              background:${isAnnouncement ? "#2a2108" : "#0f172a"};
+            ">
+              <div style="
+                color:${isAnnouncement ? "#facc15" : "#60a5fa"};
+                font-weight:bold;
+              ">
+                ${escapeHtml(message.username)}
+              </div>
+
+              <div style="margin:6px 0;color:white;">
+                ${escapeHtml(message.content)}
+              </div>
+
+              <div style="
+                display:flex;
+                justify-content:space-between;
+                align-items:center;
+                gap:10px;
+                color:#64748b;
+                font-size:12px;
+              ">
+                <span>${escapeHtml(message.created_at || "")}</span>
+
+                <button
+                  class="danger"
+                  onclick="deleteMessage(${message.id})"
+                >
+                  🗑️ Supprimer
+                </button>
+              </div>
+            </div>
+          `;
+        }).join("");
+
+      } catch (error) {
+        console.error(error);
+        container.innerHTML =
+          `<div class="empty">❌ ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+
+    async function deleteMessage(messageId) {
+      if (!confirm("🗑️ Supprimer ce message du chat public ?")) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/messages/${messageId}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur");
+        }
+
+        await loadMessages();
+
+      } catch (error) {
+        alert("❌ " + error.message);
+      }
+    }
+
+
+    async function loadUsers() {
+      const container = document.querySelector("#usersContainer");
+      const search = document.querySelector("#userSearch").value.trim();
+
+      container.innerHTML = "⏳ Chargement...";
+
+      try {
+        const url = search
+          ? `/api/admin/users?search=${encodeURIComponent(search)}`
+          : "/api/admin/users";
+
+        const response = await fetch(url, {
+          credentials: "include"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur");
+        }
+
+        if (!data.users || data.users.length === 0) {
+          container.innerHTML =
+            '<div class="empty">Aucun utilisateur trouvé.</div>';
+          return;
+        }
+
+        container.innerHTML = `
+          <div style="overflow-x:auto">
+            <table class="users-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Utilisateur</th>
+                  <th>Rôle</th>
+                  <th>💎 Gemmes</th>
+                  <th>État</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${data.users.map(user => `
+                  <tr>
+                    <td>${user.id}</td>
+                    <td><strong>${escapeHtml(user.username)}</strong></td>
+                    <td>${escapeHtml(user.role || "user")}</td>
+                    <td>${user.gems ?? 0}</td>
+                    <td>
+                      ${
+                        user.banned
+                          ? '<span class="user-banned">🚫 Banni</span>'
+                          : '<span class="user-ok">✅ Actif</span>'
+                      }
+                    </td>
+                    <td>
+                      <div class="action-buttons">
+
+                        <button
+                          class="${user.banned ? "success" : "danger"}"
+                          onclick="toggleBan(${user.id}, ${user.banned ? 0 : 1})"
+                        >
+                          ${user.banned ? "✅ Débannir" : "🚫 Bannir"}
+                        </button>
+
+                        <button
+                          class="blue"
+                          onclick="changeGems(${user.id}, ${user.gems ?? 0}, '${escapeJs(user.username)}')"
+                        >
+                          💎 Gemmes
+                        </button>
+
+                        ${
+                          user.username !== "chilladmin"
+                            ? `
+                              <button
+                                class="danger"
+                                onclick="deleteUser(${user.id}, '${escapeJs(user.username)}')"
+                              >
+                                🗑️ Supprimer
+                              </button>
+                            `
+                            : ""
+                        }
+
+                      </div>
+                    </td>
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        `;
+
+      } catch (error) {
+        console.error(error);
+        container.innerHTML =
+          `<div class="empty">❌ ${escapeHtml(error.message)}</div>`;
+      }
+    }
+
+
+    async function toggleBan(userId, banned) {
+      const action = banned ? "bannir" : "débannir";
+
+      if (!confirm(`Voulez-vous vraiment ${action} cet utilisateur ?`)) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/ban`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ banned })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur");
+        }
+
+        await loadUsers();
+
+      } catch (error) {
+        alert("❌ " + error.message);
+      }
+    }
+
+
+    async function changeGems(userId, currentGems, username) {
+      const value = prompt(
+        `💎 Nombre de gemmes pour ${username} :`,
+        currentGems
+      );
+
+      if (value === null) {
+        return;
+      }
+
+      const gems = Number(value);
+
+      if (!Number.isInteger(gems) || gems < 0) {
+        alert("❌ Nombre de gemmes invalide.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/users/${userId}/gems`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ gems })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur");
+        }
+
+        await loadUsers();
+
+      } catch (error) {
+        alert("❌ " + error.message);
+      }
+    }
+
+
+    async function deleteUser(userId, username) {
+      if (!confirm(
+        `⚠️ Supprimer définitivement le compte "${username}" ?\n\nCette action est irréversible.`
+      )) {
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/admin/users/${userId}`, {
+          method: "DELETE",
+          credentials: "include"
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Erreur");
+        }
+
+        await loadUsers();
+
+      } catch (error) {
+        alert("❌ " + error.message);
+      }
+    }
+
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+
+    function escapeJs(value) {
+      return String(value)
+        .replaceAll("\\", "\\\\")
+        .replaceAll("'", "\\'");
+    }
+
+
+    document.querySelector("#userSearch").addEventListener(
+      "keydown",
+      event => {
+        if (event.key === "Enter") {
+          loadUsers();
+        }
+      }
+    );
+
+
+    verifyAdmin();
+  </script>
+
+</body>
+</html>

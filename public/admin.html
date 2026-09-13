@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🛡️ Admin — DiscuteApp</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080b0a;color:#f5f5f5;font-family:Arial,sans-serif}
+header{padding:20px;background:#111816;border-bottom:1px solid #26352d;position:sticky;top:0;z-index:5}
+h1{margin:0 0 5px}
+nav{display:flex;gap:8px;flex-wrap:wrap;margin-top:15px}
+nav button,.btn{border:0;border-radius:9px;padding:10px 14px;background:#1f2937;color:white;cursor:pointer}
+nav button:hover,.btn:hover{filter:brightness(1.15)}
+main{width:min(1200px,94%);margin:25px auto}
+section{background:#111816;border:1px solid #26352d;border-radius:15px;padding:20px;margin-bottom:20px}
+.hidden{display:none!important}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:15px}
+.card{background:#0c1210;border:1px solid #26352d;border-radius:12px;padding:15px}
+input,textarea,select{width:100%;padding:10px;border-radius:8px;border:1px solid #34483d;background:#090d0b;color:white;margin:5px 0 10px}
+textarea{min-height:100px;resize:vertical}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #26352d;text-align:left;vertical-align:top}
+.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#1f2937;font-size:12px}
+.ok{color:#4ade80}.warn{color:#facc15}.danger{color:#f87171}
+.small{font-size:13px;color:#94a3b8}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+hr{border:0;border-top:1px solid #26352d;margin:20px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🛡️ Panneau Admin DiscuteApp</h1>
+  <div class="small">Gestion des comptes, droits, chat, boutique, Discutebot et quiz.</div>
+  <nav>
+    <button onclick="show('accounts')">👥 Comptes</button>
+    <button onclick="show('chat')">💬 Chat</button>
+    <button onclick="show('shop')">🛍️ Boutique</button>
+    <button onclick="show('bot')">🤖 Discutebot</button>
+    <button onclick="show('quiz')">🧠 Quiz</button>
+    <button onclick="location.reload()">🔄 Actualiser</button>
+  </nav>
+</header>
+
+<main>
+
+<section id="accounts">
+<h2>👥 Comptes</h2>
+<div id="accountsBox">Chargement...</div>
+</section>
+
+<section id="chat" class="hidden">
+<h2>💬 Chat public</h2>
+<div class="card">
+  <h3>📢 Annonce</h3>
+  <textarea id="announcement" maxlength="1000" placeholder="Message à publier dans le chat public..."></textarea>
+  <button class="btn" onclick="sendAnnouncement()">📢 Publier</button>
+</div>
+<hr>
+<div id="messagesBox">Chargement...</div>
+</section>
+
+<section id="shop" class="hidden">
+<h2>🛍️ Gestion de la boutique</h2>
+
+
+
+<hr>
+<div id="shopBox">Chargement...</div>
+</section>
+
+<section id="bot" class="hidden">
+<h2>🤖 Gestion de Discutebot</h2>
+
+<div class="grid">
+<div class="card">
+<h3>🙂 Humeur</h3>
+<input id="botMood" placeholder="Exemple : joyeux, calme, sérieux...">
+</div>
+<div class="card">
+<h3>🗣️ Style</h3>
+<input id="botStyle" placeholder="Exemple : familier, professionnel...">
+</div>
+</div>
+
+<button class="btn" onclick="saveBotSettings()">💾 Enregistrer les réglages</button>
+
+<hr>
+
+<div class="card">
+<h3>📢 Message global</h3>
+<p class="small">Le message sera ajouté dans toutes les conversations existantes. Discutebot ne répondra pas à ce message.</p>
+<textarea id="botBroadcast" maxlength="1000" placeholder="Message de l'administrateur..."></textarea>
+<button class="btn" onclick="broadcastBot()">📢 Envoyer à tous</button>
+</div>
+</section>
+
+<section id="quiz" class="hidden">
+<h2>🧠 Gestion du Quiz</h2>
+<div id="quizBox">Chargement...</div>
+</section>
+
+</main>
+
+<script>
+async function api(url, options={}) {
+  const response = await fetch(url,{
+    credentials:"include",
+    ...options,
+    headers:{
+      "Content-Type":"application/json",
+      ...(options.headers||{})
+    }
+  });
+
+  const data = await response.json();
+
+  if(!response.ok) throw new Error(data.error||"Erreur serveur.");
+  return data;
+}
+
+function show(id){
+  for(const section of document.querySelectorAll("main > section"))
+    section.classList.toggle("hidden",section.id!==id);
+}
+
+async function loadAccounts(){
+  const data=await api("/api/admin/users");
+  const users=data.users||data;
+
+  document.getElementById("accountsBox").innerHTML=`
+  <div style="overflow:auto">
+  <table>
+  <thead><tr>
+    <th>ID</th><th>Compte</th><th>Rôle</th><th>Gemmes</th><th>Ban</th><th>Admin</th><th>Actions</th>
+  </tr></thead>
+  <tbody>
+  ${users.map(u=>`
+    <tr>
+      <td>${u.id}</td>
+      <td><b>${escapeHtml(u.username)}</b></td>
+      <td>${escapeHtml(u.role||"user")}</td>
+      <td>${Number(u.gems||0).toLocaleString("fr-FR")} 💎</td>
+      <td>${u.banned?"🔴":"🟢"}</td>
+      <td>${u.username==="chilladmin"||Number(u.admin_panel)===1?"🛡️":"—"}</td>
+      <td>
+        <div class="actions">
+          ${u.username!=="chilladmin" ? `
+          <button class="btn" onclick="setAdmin(${u.id},${Number(u.admin_panel)?0:1})">
+            ${Number(u.admin_panel)?"🚫 Retirer Admin":"🛡️ Donner Admin"}
+          </button>`:""}
+          <button class="btn" onclick="setGems(${u.id})">💎 Gemmes</button>
+          <button class="btn" onclick="setBan(${u.id},${u.banned?0:1})">${u.banned?"🟢 Débannir":"🔴 Bannir"}</button>
+          ${u.username!=="chilladmin"?`<button class="btn" onclick="deleteUser(${u.id})">🗑️ Supprimer</button>`:""}
+        </div>
+      </td>
+    </tr>
+  `).join("")}
+  </tbody>
+  </table>
+  </div>`;
+}
+
+async function setAdmin(id,enabled){
+  await api("/api/admin/users/"+id+"/admin-access",{
+    method:"PATCH",
+    body:JSON.stringify({enabled:Boolean(enabled)})
+  });
+  await loadAccounts();
+}
+
+async function setGems(id){
+  const gems=prompt("Nouveau solde de gemmes :");
+  if(gems===null)return;
+  await api("/api/admin/users/"+id+"/gems",{
+    method:"PATCH",
+    body:JSON.stringify({gems:Number(gems)})
+  });
+  await loadAccounts();
+}
+
+async function setBan(id,banned){
+  await api("/api/admin/users/"+id+"/ban",{
+    method:"PATCH",
+    body:JSON.stringify({banned:Boolean(banned)})
+  });
+  await loadAccounts();
+}
+
+async function deleteUser(id){
+  if(!confirm("Supprimer définitivement ce compte ?"))return;
+  await api("/api/admin/users/"+id,{method:"DELETE"});
+  await loadAccounts();
+}
+
+async function sendAnnouncement(){
+  const message=document.getElementById("announcement").value.trim();
+  if(!message)return;
+  await api("/api/admin/announcement",{
+    method:"POST",
+    body:JSON.stringify({content:message})
+  });
+  document.getElementById("announcement").value="";
+  alert("Annonce publiée.");
+}
+
+async function loadMessages(){
+  const data=await api("/api/admin/messages");
+  const messages=data.messages||data;
+
+  document.getElementById("messagesBox").innerHTML=`
+  <table>
+  <thead><tr><th>ID</th><th>Auteur</th><th>Message</th><th>Date</th><th></th></tr></thead>
+  <tbody>
+  ${messages.map(m=>`
+  <tr>
+    <td>${m.id}</td>
+    <td>${escapeHtml(m.username||"")}</td>
+    <td>${escapeHtml(m.content||"")}</td>
+    <td>${escapeHtml(m.created_at||"")}</td>
+    <td><button class="btn" onclick="deleteMessage(${m.id})">🗑️</button></td>
+  </tr>`).join("")}
+  </tbody></table>`;
+}
+
+async function deleteMessage(id){
+  if(!confirm("Supprimer définitivement ce message ?")) return;
+
+  await api("/api/admin/messages/"+id,{method:"DELETE"});
+  await loadMessages();
+  alert("Message supprimé définitivement.");
+}
+
+async function loadShop(){
+  const data=await api("/api/admin/shop/items");
+  const items=data.items||data;
+
+  document.getElementById("shopBox").innerHTML=`
+  <div style="overflow:auto">
+  <table>
+  <thead><tr><th>Objet</th><th>Type</th><th>Prix</th><th>Solde</th><th>Activé</th><th>Code</th><th>Actions</th></tr></thead>
+  <tbody>
+  ${items.map(i=>`
+  <tr>
+    <td><b>${escapeHtml(i.name)}</b><br><span class="small">${escapeHtml(i.description||"")}</span></td>
+    <td>${escapeHtml(i.item_type)}</td>
+    <td>${Number(i.price||0).toLocaleString("fr-FR")} 💎</td>
+    <td>${Number(i.discount_percent||0)}%</td>
+    <td>${i.enabled?"🟢":"🔴"}</td>
+    <td>${escapeHtml(i.code||"—")}</td>
+    <td><div class="actions">
+      <button class="btn" onclick="editShop(${i.id},${i.price||0},${i.discount_percent||0},${i.enabled?1:0})">✏️ Modifier</button>
+      <button class="btn" onclick="toggleShop(${i.id})">${i.enabled?"🚫":"🟢"} ${i.enabled?"Désactiver":"Activer"}</button>
+      <button class="btn" onclick="deleteShop(${i.id})">🗑️</button>
+    </div></td>
+  </tr>`).join("")}
+  </tbody></table></div>`;
+}
+
+async function createShopItem(){
+  let data={};
+  try{
+    data=JSON.parse(document.getElementById("shopData").value||"{}");
+  }catch{
+    alert("Le JSON est invalide.");
+    return;
+  }
+
+  await api("/api/admin/shop/items",{
+    method:"POST",
+    body:JSON.stringify({
+      name:document.getElementById("shopName").value,
+      description:document.getElementById("shopDescription").value,
+      item_type:document.getElementById("shopType").value,
+      price:Number(document.getElementById("shopPrice").value||0),
+      discount_percent:Number(document.getElementById("shopDiscount").value||0),
+      code:document.getElementById("shopCode").value,
+      item_data:data
+    })
+  });
+
+  alert("Objet créé.");
+  await loadShop();
+}
+
+async function editShop(id,price,discount,enabled){
+  const p=prompt("Prix :",price);
+  if(p===null)return;
+  const d=prompt("Solde / remise (%) :",discount);
+  if(d===null)return;
+
+  await api("/api/admin/shop/items/"+id,{
+    method:"PATCH",
+    body:JSON.stringify({
+      price:Number(p),
+      discount_percent:Number(d)
+    })
+  });
+
+  await loadShop();
+}
+
+async function toggleShop(id){
+  await api("/api/admin/shop/items/"+id+"/toggle",{method:"PATCH"});
+  await loadShop();
+}
+
+async function deleteShop(id){
+  if(!confirm("Supprimer cet objet ?"))return;
+  await api("/api/admin/shop/items/"+id,{method:"DELETE"});
+  await loadShop();
+}
+
+async function loadBotSettings(){
+  const data=await api("/api/admin/bot/settings");
+  document.getElementById("botMood").value=data.settings?.mood||"";
+  document.getElementById("botStyle").value=data.settings?.style||"";
+}
+
+async function saveBotSettings(){
+  await api("/api/admin/bot/settings",{
+    method:"PATCH",
+    body:JSON.stringify({
+      mood:document.getElementById("botMood").value,
+      style:document.getElementById("botStyle").value
+    })
+  });
+  alert("Discutebot a été configuré.");
+}
+
+async function broadcastBot(){
+  const message=document.getElementById("botBroadcast").value.trim();
+  if(!message)return;
+
+  await api("/api/admin/bot/broadcast",{
+    method:"POST",
+    body:JSON.stringify({message})
+  });
+
+  document.getElementById("botBroadcast").value="";
+  alert("Message envoyé dans toutes les conversations.");
+}
+
+async function loadQuiz(){
+  const [data, themesData] = await Promise.all([
+    api("/api/admin/quiz/settings"),
+    api("/api/admin/quiz/themes")
+  ]);
+
+  document.getElementById("quizBox").innerHTML=`
+  <div class="card">
+    <h3>🎮 Quiz global</h3>
+    <button class="btn" onclick="setQuizGlobal(${data.enabled?0:1})">
+      ${data.enabled?"🚫 Désactiver le quiz":"🟢 Activer le quiz"}
+    </button>
+  </div>
+
+  <hr>
+
+  <h3>🏆 Récompenses par difficulté</h3>
+  <div class="grid">
+  ${(data.difficulties||[]).map(d=>`
+    <div class="card">
+      <b>${escapeHtml(d.name)}</b>
+      <input id="reward-${d.code}" type="number" min="0" value="${d.reward}">
+      <button class="btn" onclick="saveDifficulty('${d.code}',${d.enabled?0:1})">
+        💾 Enregistrer
+      </button>
+      <button class="btn" onclick="saveDifficulty('${d.code}',${d.enabled?0:1},true)">
+        ${d.enabled?"🚫 Retirer":"🟢 Restaurer"}
+      </button>
+    </div>
+  `).join("")}
+  </div>
+
+  <hr>
+
+  <h3>🎯 Thèmes du quiz</h3>
+  <p>Active ou désactive chaque thème indépendamment.</p>
+
+  <div class="grid">
+  ${(themesData.themes||[]).map(theme=>`
+    <div class="card">
+      <b>${escapeHtml(theme.name)}</b>
+      <p>${theme.enabled ? "🟢 Actif" : "🔴 Désactivé"}</p>
+      <button class="btn"
+        onclick="toggleQuizTheme(${theme.id}, ${theme.enabled ? 0 : 1})">
+        ${theme.enabled ? "🚫 Désactiver" : "🟢 Réactiver"}
+      </button>
+    </div>
+  `).join("")}
+  </div>
+
+  <hr>
+  <h3>❓ Questions</h3>
+  <div class="grid">
+  ${(data.questions||[]).map(q=>`
+    <div class="card">
+      <b>#${q.id+1}</b>
+      <p>${escapeHtml(q.question)}</p>
+      <select id="qd-${q.id}">
+        ${["easy","medium","hard"].map(x=>`
+          <option value="${x}" ${q.difficulty===x?"selected":""}>${x}</option>
+        `).join("")}
+      </select>
+      <button class="btn" onclick="saveQuestion(${q.id},${q.enabled?0:1})">
+        ${q.enabled?"🚫 Retirer":"🟢 Restaurer"}
+      </button>
+    </div>
+  `).join("")}
+  </div>`;
+}
+
+async function setQuizGlobal(enabled){
+  await api("/api/admin/quiz/settings",{
+    method:"PATCH",
+    body:JSON.stringify({enabled:Boolean(enabled)})
+  });
+  await loadQuiz();
+}
+
+async function saveDifficulty(code,toggle){
+  const reward=Number(document.getElementById("reward-"+code).value||0);
+  await api("/api/admin/quiz/difficulties/"+code,{
+    method:"PATCH",
+    body:JSON.stringify({
+      reward,
+      enabled:Boolean(toggle)
+    })
+  });
+  await loadQuiz();
+}
+
+async function saveQuestion(id,toggle){
+  await api("/api/admin/quiz/questions/"+id,{
+    method:"PATCH",
+    body:JSON.stringify({
+      difficulty:document.getElementById("qd-"+id).value,
+      enabled:Boolean(toggle)
+    })
+  });
+  await loadQuiz();
+}
+
+
+async function toggleQuizTheme(id, enabled){
+  await api("/api/admin/quiz/themes/"+id, {
+    method: "PATCH",
+    body: JSON.stringify({
+      enabled: Boolean(enabled)
+    })
+  });
+
+  await loadQuiz();
+}
+
+function escapeHtml(value){
+  return String(value??"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+(async()=>{
+  try{
+    await loadAccounts();
+    await loadMessages();
+    await loadShop();
+    await loadBotSettings();
+    await loadQuiz();
+  }catch(error){
+    document.querySelector("main").innerHTML=
+      `<section><h2>❌ Erreur</h2><p>${escapeHtml(error.message)}</p></section>`;
+  }
+})();
+</script>
+</body>
+</html>

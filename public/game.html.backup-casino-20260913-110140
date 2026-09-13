@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🎮 Quiz - DiscuteApp</title>
+  <link rel="stylesheet" href="/style.css">
+  <style>
+    body {
+      min-height: 100vh;
+      padding: 30px;
+    }
+
+    #quizDisabledScreen {
+      min-height: 70vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #quizDisabledScreen .maintenance-card {
+      max-width: 520px;
+      padding: 35px;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      background: #111827;
+      box-shadow: 0 0 30px rgba(0,0,0,.25);
+    }
+
+    #quizDisabledScreen h2 {
+      color: #facc15;
+      margin-bottom: 15px;
+    }
+
+    #quizDisabledScreen p {
+      color: #cbd5e1;
+      line-height: 1.6;
+    }
+
+    .quiz-container {
+      max-width: 850px;
+      margin: auto;
+      background: #151b2e;
+      border: 1px solid #334155;
+      border-radius: 18px;
+      padding: 25px;
+      box-shadow: 0 0 30px #0005;
+    }
+
+    h1, h2 {
+      text-align: center;
+    }
+
+    .back-button,
+    .quiz-button {
+      border: 0;
+      border-radius: 10px;
+      padding: 12px 18px;
+      cursor: pointer;
+      font-weight: bold;
+      margin: 6px;
+    }
+
+    .back-button {
+      background: #334155;
+      color: white;
+    }
+
+    .quiz-button {
+      background: #6366f1;
+      color: white;
+    }
+
+    .themes {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 25px;
+    }
+
+    .theme {
+      background: #202943;
+      border: 1px solid #475569;
+      color: white;
+      border-radius: 12px;
+      padding: 18px;
+      cursor: pointer;
+      text-align: center;
+      font-size: 16px;
+    }
+
+    .theme:hover {
+      background: #4f46e5;
+    }
+
+    .difficulty {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 25px 0;
+    }
+
+    .difficulty button {
+      padding: 15px 25px;
+      border: 0;
+      border-radius: 12px;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .easy {
+      background: #16a34a;
+    }
+
+    .hard {
+      background: #dc2626;
+    }
+
+    .impossible {
+      background: #7c3aed;
+    }
+
+    .question {
+      background: #202943;
+      padding: 22px;
+      border-radius: 14px;
+      margin-top: 20px;
+    }
+
+    .answers {
+      display: grid;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .answer {
+      background: #334155;
+      color: white;
+      border: 1px solid #64748b;
+      border-radius: 10px;
+      padding: 15px;
+      cursor: pointer;
+      text-align: left;
+    }
+
+    .answer:hover {
+      background: #4f46e5;
+    }
+
+    .answer.correct {
+      background: #15803d;
+    }
+
+    .answer.wrong {
+      background: #b91c1c;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    #result {
+      text-align: center;
+      margin-top: 25px;
+      font-size: 20px;
+    }
+  </style>
+
+<style>
+.themes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.theme-card {
+  position: relative;
+  overflow: hidden;
+  padding: 22px 16px;
+  border: 1px solid rgba(255,255,255,.15);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(35,35,65,.95), rgba(15,15,30,.98));
+  color: white;
+  text-align: center;
+  cursor: pointer;
+  transition: .25s ease;
+  box-shadow: 0 8px 25px rgba(0,0,0,.25);
+}
+
+.theme-card::before {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  background: linear-gradient(120deg, transparent, rgba(139,92,246,.35), transparent);
+  transform: translateX(-100%);
+  transition: .5s;
+}
+
+.theme-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  border-color: #a78bfa;
+  box-shadow: 0 12px 35px rgba(139,92,246,.35);
+}
+
+.theme-card:hover::before {
+  transform: translateX(100%);
+}
+
+.theme-icon {
+  position: relative;
+  font-size: 42px;
+  margin-bottom: 10px;
+}
+
+.theme-name {
+  position: relative;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+
+.theme-card.selected {
+  border-color: #22c55e;
+  background: linear-gradient(145deg, rgba(22,101,52,.8), rgba(15,35,25,.98));
+  box-shadow: 0 0 25px rgba(34,197,94,.3);
+}
+
+@media (max-width: 600px) {
+  .themes {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .theme-card {
+    padding: 18px 10px;
+  }
+
+  .theme-icon {
+    font-size: 32px;
+  }
+
+  .theme-name {
+    font-size: 14px;
+  }
+}
+</style>
+
+</head>
+<body>
+
+  <div id="quizDisabledScreen" class="hidden">
+    <div class="maintenance-card">
+      <h2>🔧 Quiz temporairement désactivé</h2>
+      <p>
+        L’administrateur effectue actuellement des modifications.<br>
+        Merci de revenir un peu plus tard.
+      </p>
+    </div>
+  </div>
+
+  <div class="quiz-container">
+    <button class="back-button" onclick="location.href='/'">⬅️ Retour</button>
+
+    <h1>🎮 Quiz DiscuteApp</h1>
+
+    <section id="themeScreen">
+      <h2>Choisis ton thème</h2>
+      <div class="themes" id="themes">
+  <div class="theme-card">
+    <div class="theme-icon">⏳</div>
+    <div class="theme-name">Chargement des thèmes...</div>
+  </div>
+</div>
+    </section>
+
+    <section id="difficultyScreen" class="hidden">
+      <h2 id="selectedTheme"></h2>
+      <p style="text-align:center;">Choisis ta difficulté</p>
+
+      <div class="difficulty">
+        <button class="easy" onclick="startQuiz('facile')">🟢 Facile</button>
+        <button class="hard" onclick="startQuiz('difficile')">🔴 Difficile</button>
+        <button class="impossible" onclick="startQuiz('impossible')">🟣 Impossible</button>
+      </div>
+
+      <div style="text-align:center;">
+        <button class="back-button" onclick="backToThemes()">⬅️ Changer de thème</button>
+      </div>
+    </section>
+
+    <section id="quizScreen" class="hidden">
+      <h2 id="quizTitle"></h2>
+      <p id="progress" style="text-align:center;"></p>
+
+      <div class="question">
+        <h2 id="questionText"></h2>
+        <div class="answers" id="answers"></div>
+      </div>
+    </section>
+
+    <section id="resultScreen" class="hidden">
+      <h2>🏁 Résultat du quiz</h2>
+      <div id="result"></div>
+      <div style="text-align:center;">
+        <button class="quiz-button" onclick="backToThemes()">🎮 Rejouer</button>
+        <button class="back-button" onclick="location.href='/'">🏠 Accueil</button>
+      </div>
+    </section>
+  </div>
+
+<script>
+const questionBank = {
+  "Culture générale": {
+    facile: [
+      ["Quelle est la capitale de la France ?", ["Paris", "Lyon", "Lille", "Nice"], 0],
+      ["Combien de jours compte une semaine ?", ["5", "6", "7", "8"], 2],
+      ["Quelle planète est surnommée la planète rouge ?", ["Mars", "Vénus", "Jupiter", "Saturne"], 0],
+      ["Quel animal miaule ?", ["Chien", "Chat", "Cheval", "Vache"], 1],
+      ["Combien font 5 + 5 ?", ["8", "9", "10", "11"], 2],
+      ["Quelle est la couleur du ciel par beau temps ?", ["Vert", "Bleu", "Rouge", "Orange"], 1],
+      ["Quel est le contraire de chaud ?", ["Froid", "Grand", "Rapide", "Lourd"], 0],
+      ["Combien de côtés possède un triangle ?", ["2", "3", "4", "5"], 1],
+      ["Quel fruit est généralement jaune ?", ["Banane", "Fraise", "Myrtille", "Cerise"], 0],
+      ["Quelle langue parle-t-on principalement en France ?", ["Anglais", "Français", "Italien", "Allemand"], 1]
+    ],
+    difficile: [
+      ["Quel est le symbole chimique de l’or ?", ["Ag", "Au", "Fe", "O"], 1],
+      ["Qui a écrit Les Misérables ?", ["Victor Hugo", "Molière", "Zola", "Balzac"], 0],
+      ["Quelle est la capitale de l’Australie ?", ["Sydney", "Melbourne", "Canberra", "Perth"], 2],
+      ["Quel est le plus grand océan ?", ["Atlantique", "Pacifique", "Indien", "Arctique"], 1],
+      ["En quelle année l’homme a-t-il marché sur la Lune pour la première fois ?", ["1959", "1969", "1979", "1989"], 1],
+      ["Quel organe produit l’insuline ?", ["Le foie", "Le pancréas", "Le cœur", "Le rein"], 1],
+      ["Qui a peint Guernica ?", ["Picasso", "Monet", "Rembrandt", "Dali"], 0],
+      ["Quel est le nombre premier suivant 29 ?", ["30", "31", "32", "33"], 1],
+      ["Quelle civilisation a construit Machu Picchu ?", ["Romaine", "Inca", "Égyptienne", "Viking"], 1],
+      ["Quel gaz représente la plus grande partie de l’atmosphère terrestre ?", ["Oxygène", "Azote", "CO₂", "Hydrogène"], 1]
+    ],
+    impossible: [
+      ["Quel philosophe a écrit Le Banquet ?", ["Platon", "Aristote", "Socrate", "Épicure"], 0],
+      ["Quelle est la valeur approximative de la constante d’Avogadro ?", ["6,02 × 10²³", "9,81 × 10²", "3,14 × 10⁸", "1,60 × 10⁻¹⁹"], 0],
+      ["Quel traité a créé la Communauté économique européenne en 1957 ?", ["Traité de Rome", "Traité de Versailles", "Traité de Maastricht", "Traité de Lisbonne"], 0],
+      ["Qui a formulé les lois du mouvement et de la gravitation universelle ?", ["Newton", "Einstein", "Galilée", "Kepler"], 0],
+      ["Quel écrivain est l’auteur de À la recherche du temps perdu ?", ["Proust", "Camus", "Sartre", "Flaubert"], 0],
+      ["Quel est le plus petit nombre parfait ?", ["4", "6", "8", "10"], 1],
+      ["Quelle unité mesure la résistance électrique ?", ["Volt", "Ampère", "Ohm", "Watt"], 2],
+      ["Quel événement marque traditionnellement la fin de l’Antiquité ?", ["La chute de Rome en 476", "La Révolution française", "La découverte de l’Amérique", "La bataille de Waterloo"], 0],
+      ["Quel mathématicien est associé au dernier théorème démontré en 1994 ?", ["Fermat", "Euclide", "Pythagore", "Pascal"], 0],
+      ["Quelle langue ancienne est à l’origine du mot démocratie ?", ["Latin", "Grec", "Arabe", "Sanskrit"], 1]
+    ]
+  }
+};
+
+const themeNames = [
+  "Culture générale",
+  "Histoire",
+  "Géographie",
+  "Sciences",
+  "Jeux vidéo",
+  "Films et séries",
+  "Musique",
+  "Football",
+  "Sports",
+  "Animaux",
+  "Nature",
+  "Cuisine",
+  "Jeux et logique",
+  "Internet",
+  "France",
+  "Monde",
+  "Espace",
+  "Inventions",
+  "Culture populaire",
+  "Technologie"
+];
+
+let selectedTheme = "";
+async function checkQuizStatus() {
+  try {
+    const response = await fetch("/api/admin/quiz/settings");
+    const data = await response.json();
+
+    const quizPage = document.querySelector(".quiz-container");
+    const disabledPage = document.getElementById("quizDisabledScreen");
+
+    if (data.enabled === false) {
+      quizPage.classList.add("hidden");
+      disabledPage.classList.remove("hidden");
+    } else {
+      quizPage.classList.remove("hidden");
+      disabledPage.classList.add("hidden");
+    }
+  } catch (error) {
+    console.error("Erreur de vérification du quiz :", error);
+  }
+}
+
+checkQuizStatus();
+
+let difficulty = "";
+let questions = [];
+let currentQuestion = 0;
+let score = 0;
+let answered = false;
+
+const themesBox = document.getElementById("themes");
+
+async function loadQuizThemes() {
+  try {
+    const response = await fetch("/api/game/quiz/themes", {
+      credentials: "include"
+    });
+
+    if (!response.ok) {
+      throw new Error("Impossible de charger les thèmes");
+    }
+
+    const data = await response.json();
+
+    themesBox.innerHTML = "";
+
+    data.themes.forEach(theme => {
+      const button = document.createElement("button");
+      button.className = "quiz-button";
+      button.textContent = theme.name;
+
+      button.addEventListener("click", () => {
+        startQuiz(theme.name);
+      });
+
+      themesBox.appendChild(button);
+    });
+  } catch (error) {
+    console.error("Erreur thèmes quiz :", error);
+    themesBox.innerHTML =
+      "<p>Impossible de charger les thèmes du quiz.</p>";
+  }
+}
+
+loadQuizThemes();
+
+function startQuiz(level) {
+  difficulty = level;
+
+  const theme = questionBank[selectedTheme];
+
+  if (!theme || !theme[level]) {
+    alert("Ce thème sera bientôt disponible. Choisis Culture générale pour tester les difficultés.");
+    return;
+  }
+
+  questions = [...theme[level]]
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 10);
+
+  currentQuestion = 0;
+  score = 0;
+
+  document.getElementById("difficultyScreen").classList.add("hidden");
+  document.getElementById("quizScreen").classList.remove("hidden");
+  document.getElementById("quizTitle").textContent =
+    selectedTheme + " — " + difficulty;
+
+  showQuestion();
+}
+
+function showQuestion() {
+  answered = false;
+
+  const question = questions[currentQuestion];
+
+  document.getElementById("progress").textContent =
+    "Question " + (currentQuestion + 1) + " / " + questions.length;
+
+  document.getElementById("questionText").textContent = question[0];
+
+  const answers = document.getElementById("answers");
+  answers.innerHTML = "";
+
+  question[1].forEach((answer, index) => {
+    const button = document.createElement("button");
+    button.className = "answer";
+    button.textContent = answer;
+    button.onclick = () => answerQuestion(index, button);
+    answers.appendChild(button);
+  });
+}
+
+function answerQuestion(index, button) {
+  if (answered) return;
+  answered = true;
+
+  const correct = questions[currentQuestion][2];
+  const buttons = document.querySelectorAll(".answer");
+
+  buttons[correct].classList.add("correct");
+
+  if (index === correct) {
+    score++;
+  } else {
+    button.classList.add("wrong");
+  }
+
+  setTimeout(() => {
+    currentQuestion++;
+
+    if (currentQuestion >= questions.length) {
+      finishQuiz();
+    } else {
+      showQuestion();
+    }
+  }, 700);
+}
+
+async function finishQuiz() {
+  document.getElementById("quizScreen").classList.add("hidden");
+  document.getElementById("resultScreen").classList.remove("hidden");
+
+  let reward = 0;
+
+  if (score === 8) reward = 100;
+  if (score === 9) reward = 250;
+  if (score === 10) reward = 500;
+
+  document.getElementById("result").innerHTML =
+    "Tu as obtenu <strong>" + score + " / 10</strong><br><br>" +
+    (reward > 0
+      ? "🎉 Tu gagnes <strong>" + reward + " 💎</strong> !"
+      : "😕 Il faut au moins 8 / 10 pour gagner des gemmes.");
+
+  if (reward > 0) {
+    try {
+      await fetch("/api/game/quiz/reward", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          score,
+          reward,
+          theme: selectedTheme,
+          difficulty
+        })
+      });
+    } catch (error) {
+      console.error("Récompense impossible :", error);
+    }
+  }
+}
+
+</script>
+
+  <script src="question-bank-extra.js"></script>
+</body>
+</html>

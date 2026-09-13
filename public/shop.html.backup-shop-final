@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🛍️ Boutique - DiscuteApp</title>
+  <link rel="stylesheet" href="/style.css">
+
+  <style>
+    body.shop-page {
+      min-height: 100vh;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 15% 20%, rgba(34,197,94,.18), transparent 28%),
+        radial-gradient(circle at 85% 25%, rgba(250,204,21,.15), transparent 30%),
+        radial-gradient(circle at 50% 90%, rgba(16,185,129,.12), transparent 35%),
+        #06110d;
+    }
+
+    .shop-background-light {
+      position: fixed;
+      width: 280px;
+      height: 280px;
+      border-radius: 50%;
+      filter: blur(90px);
+      opacity: .22;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .shop-light-one {
+      top: -80px;
+      left: -80px;
+      background: #22c55e;
+    }
+
+    .shop-light-two {
+      right: -80px;
+      top: 30%;
+      background: #facc15;
+    }
+
+    .shop-light-three {
+      bottom: -100px;
+      left: 40%;
+      background: #10b981;
+    }
+
+    .shop-page > *:not(.shop-background-light) {
+      position: relative;
+      z-index: 1;
+    }
+
+    .shop-container {
+      width: min(1150px, 94%);
+      margin: 30px auto;
+      padding: 28px;
+      border: 1px solid rgba(250,204,21,.2);
+      background: rgba(10,25,18,.84);
+      backdrop-filter: blur(14px);
+      border-radius: 22px;
+      box-shadow:
+        0 20px 70px rgba(0,0,0,.45),
+        inset 0 0 35px rgba(34,197,94,.04);
+    }
+
+    .shop-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      margin-bottom: 25px;
+    }
+
+    .shop-header h1 {
+      margin: 0;
+      color: #facc15;
+      text-shadow: 0 0 18px rgba(250,204,21,.35);
+    }
+
+    .shop-subtitle {
+      color: #a7f3d0;
+      margin-top: 7px;
+    }
+
+    .shop-gems {
+      padding: 15px 22px;
+      border-radius: 15px;
+      background: rgba(2,6,23,.75);
+      border: 1px solid rgba(250,204,21,.35);
+      color: #facc15;
+      font-size: 20px;
+      font-weight: 800;
+      white-space: nowrap;
+      box-shadow: 0 0 20px rgba(250,204,21,.12);
+    }
+
+    .shop-section-title {
+      margin: 30px 0 15px;
+      color: #86efac;
+    }
+
+    .shop-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 17px;
+    }
+
+    .shop-card {
+      display: flex;
+      flex-direction: column;
+      padding: 20px;
+      min-height: 285px;
+      border-radius: 18px;
+      background:
+        linear-gradient(145deg, rgba(31,53,40,.92), rgba(10,25,18,.96));
+      border: 1px solid rgba(134,239,172,.12);
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+      transition: transform .2s, border-color .2s, box-shadow .2s;
+    }
+
+    .shop-card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(250,204,21,.5);
+      box-shadow:
+        0 15px 35px rgba(0,0,0,.3),
+        0 0 25px rgba(250,204,21,.08);
+    }
+
+    .shop-icon {
+      height: 80px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 52px;
+    }
+
+    .shop-preview-avatar {
+      width: 68px;
+      height: 68px;
+      border-radius: 18px;
+      object-fit: cover;
+      box-shadow: 0 0 18px rgba(255,255,255,.18);
+    }
+
+    .shop-card h3 {
+      margin: 12px 0 8px;
+      color: #fde68a;
+      text-align: center;
+    }
+
+    .shop-card p {
+      flex: 1;
+      color: #cbd5e1;
+      text-align: center;
+      line-height: 1.4;
+    }
+
+    .shop-price {
+      display: block;
+      margin: 12px 0;
+      color: #67e8f9;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 900;
+    }
+
+    .shop-buy {
+      width: 100%;
+      padding: 11px;
+      border: 0;
+      border-radius: 10px;
+      cursor: pointer;
+      background: linear-gradient(135deg, #166534, #15803d);
+      color: white;
+      font-weight: 800;
+    }
+
+    .shop-buy:hover {
+      filter: brightness(1.15);
+    }
+
+    .shop-buy:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .shop-message {
+      min-height: 25px;
+      margin: 12px 0;
+      text-align: center;
+      font-weight: 700;
+    }
+
+    .shop-success {
+      color: #4ade80;
+    }
+
+    .shop-error {
+      color: #f87171;
+    }
+
+    .inventory-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 15px;
+    }
+
+    .inventory-card {
+      padding: 18px;
+      border-radius: 16px;
+      background: rgba(15,23,42,.75);
+      border: 1px solid rgba(148,163,184,.18);
+    }
+
+    .inventory-card.equipped {
+      border-color: #facc15;
+      box-shadow: 0 0 20px rgba(250,204,21,.12);
+    }
+
+    .inventory-card h3 {
+      color: #f8fafc;
+      margin-top: 0;
+    }
+
+    .inventory-type {
+      color: #94a3b8;
+      font-size: 13px;
+    }
+
+    .inventory-button {
+      width: 100%;
+      padding: 10px;
+      border: 0;
+      border-radius: 9px;
+      cursor: pointer;
+      font-weight: 800;
+      background: #334155;
+      color: white;
+    }
+
+    .inventory-button:hover {
+      background: #475569;
+    }
+
+    .shop-empty {
+      padding: 30px;
+      text-align: center;
+      color: #94a3b8;
+    }
+
+    .shop-diamond,
+    .shop-money {
+      position: fixed;
+      pointer-events: none;
+      user-select: none;
+      z-index: 0;
+    }
+
+    .shop-diamond {
+      font-size: 32px;
+      opacity: .16;
+      animation: shopFloat 5s ease-in-out infinite;
+      filter: drop-shadow(0 0 12px #38bdf8);
+    }
+
+    .shop-money {
+      font-size: 30px;
+      opacity: .13;
+      animation: shopFloat 7s ease-in-out infinite;
+    }
+
+    @keyframes shopFloat {
+      0%,100% { transform: translateY(0) rotate(-5deg); }
+      50% { transform: translateY(-18px) rotate(5deg); }
+    }
+
+    @media (max-width: 650px) {
+      .shop-container {
+        padding: 18px;
+      }
+
+      .shop-header {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .shop-gems {
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+
+<body class="shop-page">
+
+  <div class="shop-background-light shop-light-one"></div>
+  <div class="shop-background-light shop-light-two"></div>
+  <div class="shop-background-light shop-light-three"></div>
+
+  <div class="shop-diamond" style="top:12%;left:8%;">💎</div>
+  <div class="shop-diamond" style="top:35%;right:10%;animation-delay:-2s;">💎</div>
+  <div class="shop-diamond" style="top:70%;left:5%;animation-delay:-4s;">💎</div>
+  <div class="shop-diamond" style="bottom:8%;right:18%;animation-delay:-1s;">💎</div>
+
+  <div class="shop-money" style="top:20%;right:25%;">💵</div>
+  <div class="shop-money" style="top:55%;left:15%;animation-delay:-3s;">💰</div>
+  <div class="shop-money" style="bottom:15%;right:7%;animation-delay:-5s;">💵</div>
+
+  <main class="shop-container">
+
+    <header class="shop-header">
+      <div>
+        <h1>🛍️ Boutique DiscuteApp</h1>
+        <div class="shop-subtitle">
+          Personnalise ton profil avec tes gemmes 💎
+        </div>
+      </div>
+
+      <div class="shop-gems">
+        💎 <span id="shopGems">0</span>
+      </div>
+    </header>
+
+    <div id="shopMessage" class="shop-message"></div>
+
+    <h2 class="shop-section-title">🛒 Articles disponibles</h2>
+    <div id="shopItems" class="shop-grid">
+      <div class="shop-empty">Chargement de la boutique...</div>
+    </div>
+
+    <h2 class="shop-section-title">🎒 Mon inventaire</h2>
+    <div id="inventory" class="inventory-grid">
+      <div class="shop-empty">Chargement de l'inventaire...</div>
+    </div>
+
+  </main>
+
+<script>
+let currentUser = null;
+let shopItems = [];
+
+function escapeHtml(value) {
+  const div = document.createElement("div");
+  div.textContent = value ?? "";
+  return div.innerHTML;
+}
+
+function showShopMessage(text, type = "") {
+  const box = document.getElementById("shopMessage");
+  box.textContent = text;
+  box.className = "shop-message " + type;
+
+  if (text) {
+    setTimeout(() => {
+      box.textContent = "";
+      box.className = "shop-message";
+    }, 3500);
+  }
+}
+
+function formatPrice(price) {
+  return Number(price).toLocaleString("fr-FR") + " 💎";
+}
+
+function getPreview(item) {
+  const data = item.item_data || {};
+
+  if (item.item_type === "avatar" && data.src) {
+    return `
+      <img
+        class="shop-preview-avatar"
+        src="${escapeHtml(data.src)}"
+        alt=""
+      >
+    `;
+  }
+
+  if (item.item_type === "title") {
+    return `
+      <span class="${escapeHtml(data.className || "")}">
+        ${escapeHtml(data.text || "Titre")}
+      </span>
+    `;
+  }
+
+  if (item.item_type === "text_color") {
+    return `
+      <span style="
+        color:${escapeHtml(data.color || "#fff")};
+        font-size:30px;
+        font-weight:900;
+      ">Aa</span>
+    `;
+  }
+
+  if (item.item_type === "text_effect") {
+    return `
+      <span class="rainbow-wave-preview">Aa</span>
+    `;
+  }
+
+  return "🎁";
+}
+
+function getTypeName(type) {
+  if (type === "title") return "🏷️ Titre";
+  if (type === "avatar") return "🖼️ Image";
+  if (type === "text_color") return "🎨 Couleur";
+  if (type === "text_effect") return "✨ Effet";
+  return "🎁 Objet";
+}
+
+function renderShop() {
+  const container = document.getElementById("shopItems");
+
+  if (!shopItems.length) {
+    container.innerHTML = '<div class="shop-empty">Aucun article disponible.</div>';
+    return;
+  }
+
+  container.innerHTML = shopItems.map(item => `
+    <article class="shop-card">
+      <div class="shop-icon">
+        ${getPreview(item)}
+      </div>
+
+      <h3>${escapeHtml(item.name)}</h3>
+
+      <p>${escapeHtml(item.description)}</p>
+
+      <strong class="shop-price">
+        ${formatPrice(item.price)}
+      </strong>
+
+      <button
+        class="shop-buy"
+        onclick="buyItem(${Number(item.id)})"
+      >
+        🛒 Acheter
+      </button>
+    </article>
+  `).join("");
+}
+
+async function loadUser() {
+  const response = await fetch("/api/me", {
+    credentials: "include"
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Tu dois être connecté.");
+  }
+
+  currentUser = data.user;
+  document.getElementById("shopGems").textContent =
+    Number(currentUser.gems || 0).toLocaleString("fr-FR");
+}
+
+async function loadShop() {
+  const response = await fetch("/api/shop/items");
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Impossible de charger la boutique.");
+  }
+
+  shopItems = data.items || [];
+  renderShop();
+}
+
+async function loadInventory() {
+  const container = document.getElementById("inventory");
+
+  try {
+    const response = await fetch("/api/shop/inventory", {
+      credentials: "include"
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      container.innerHTML =
+        `<div class="shop-empty">${escapeHtml(data.error || "Erreur.")}</div>`;
+      return;
+    }
+
+    const items = data.items || [];
+
+    if (!items.length) {
+      container.innerHTML =
+        '<div class="shop-empty">Ton inventaire est vide.</div>';
+      return;
+    }
+
+    container.innerHTML = items.map(item => {
+      const data = item.item_data || {};
+
+      return `
+        <article class="inventory-card ${item.equipped ? "equipped" : ""}">
+          <h3>
+            ${getPreview(item)}
+            ${escapeHtml(item.name)}
+          </h3>
+
+          <div class="inventory-type">
+            ${getTypeName(item.item_type)}
+          </div>
+
+          <p>${escapeHtml(item.description || "")}</p>
+
+          <button
+            class="inventory-button"
+            onclick="toggleItem(${Number(item.id)}, ${item.equipped ? 0 : 1})"
+          >
+            ${item.equipped ? "❌ Retirer" : "⚡ Équiper"}
+          </button>
+        </article>
+      `;
+    }).join("");
+
+  } catch {
+    container.innerHTML =
+      '<div class="shop-empty">Erreur de connexion.</div>';
+  }
+}
+
+async function buyItem(itemId) {
+  try {
+    const response = await fetch("/api/shop/buy", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "include",
+      body: JSON.stringify({ itemId })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showShopMessage(data.error || "Impossible d'acheter cet objet.", "shop-error");
+      return;
+    }
+
+    currentUser = data.user;
+
+    document.getElementById("shopGems").textContent =
+      Number(currentUser.gems || 0).toLocaleString("fr-FR");
+
+    showShopMessage("✅ Objet acheté avec succès !", "shop-success");
+
+    await loadInventory();
+
+  } catch {
+    showShopMessage("Erreur de connexion.", "shop-error");
+  }
+}
+
+async function toggleItem(itemId, equipped) {
+  try {
+    const response = await fetch("/api/shop/equip", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      credentials: "include",
+      body: JSON.stringify({
+        itemId,
+        equipped
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      showShopMessage(data.error || "Impossible de modifier l'équipement.", "shop-error");
+      return;
+    }
+
+    showShopMessage(
+      equipped ? "⚡ Objet équipé !" : "❌ Objet retiré.",
+      "shop-success"
+    );
+
+    await loadInventory();
+
+  } catch {
+    showShopMessage("Erreur de connexion.", "shop-error");
+  }
+}
+
+async function start() {
+  try {
+    await loadUser();
+    await loadShop();
+    await loadInventory();
+  } catch (error) {
+    showShopMessage(error.message, "shop-error");
+
+    document.getElementById("shopItems").innerHTML =
+      '<div class="shop-empty">Connecte-toi depuis DiscuteApp pour utiliser la boutique.</div>';
+  }
+}
+
+start();
+</script>
+
+</body>
+</html>
