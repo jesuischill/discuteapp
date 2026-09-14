@@ -499,7 +499,7 @@ body::after {
 
     async function login() {
       try {
-        await api("/api/login", {
+        const data = await api("/api/login", {
           method: "POST",
           body: JSON.stringify({
             username: document.getElementById("username").value,
@@ -508,6 +508,10 @@ body::after {
         });
 
         await loadUser();
+
+        if (data.notice) {
+          showMessage(data.notice);
+        }
       } catch (error) {
         showMessage(error.message);
       }
@@ -570,6 +574,7 @@ body::after {
         currentUser = data.user;
 
         setLoggedInUI(true);
+    initAccountSocket();
         document.getElementById("userName").textContent = data.user.username;
         document.getElementById("userGems").textContent = data.user.gems;
 
@@ -808,7 +813,76 @@ function openShop() {
       input.focus();
     });
 
-    function openChat() {
+    
+function updateAdminButton(enabled) {
+  const button = document.getElementById("adminButton");
+
+  if (!button) return;
+
+  if (enabled) {
+    button.classList.remove("hidden");
+    button.classList.remove("app-controls-hidden");
+    button.style.display = "inline-block";
+  } else {
+    button.classList.add("hidden");
+    button.classList.add("app-controls-hidden");
+    button.style.display = "none";
+  }
+}
+
+function initAccountSocket() {
+  if (window.discuteAccountSocket) return;
+
+  window.discuteAccountSocket = io();
+
+  window.discuteAccountSocket.on("account:banned", async ({ reason }) => {
+    const message = `Vous êtes banni pour : ${reason || "raison non précisée."}`;
+
+    if (typeof showMessage === "function") {
+      showMessage(message);
+    } else {
+      alert(message);
+    }
+
+    currentUser = null;
+
+    if (socket) {
+      socket.disconnect();
+      socket = null;
+    }
+
+    try {
+      await api("/api/logout", {
+        method: "POST"
+      });
+    } catch {}
+
+    setLoggedInUI(false);
+  });
+
+  window.discuteAccountSocket.on("account:unbanned", () => {
+    if (typeof showMessage === "function") {
+      showMessage("Ton compte a été débanni.");
+    }
+  });
+
+  window.discuteAccountSocket.on("admin:access", ({ enabled }) => {
+    if (currentUser) {
+      currentUser.admin_panel = Number(enabled);
+    }
+
+    updateAdminButton(
+      currentUser &&
+      (
+        currentUser.username === "chilladmin" ||
+        Number(enabled) === 1 ||
+        currentUser.role === "owner"
+      )
+    );
+  });
+}
+
+function openChat() {
       if (!currentUser) {
         alert("Connecte-toi pour utiliser le chat public.");
         return;

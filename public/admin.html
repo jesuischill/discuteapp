@@ -181,10 +181,36 @@ async function setGems(id){
 }
 
 async function setBan(id,banned){
+  let reason = "";
+
+  if (Number(banned) === 1) {
+    reason = prompt("Raison du bannissement :");
+
+    if (reason === null) {
+      return;
+    }
+
+    reason = reason.trim();
+
+    if (!reason) {
+      alert("Une raison est obligatoire.");
+      return;
+    }
+
+    if (reason.length > 500) {
+      alert("La raison ne peut pas dépasser 500 caractères.");
+      return;
+    }
+  }
+
   await api("/api/admin/users/"+id+"/ban",{
     method:"PATCH",
-    body:JSON.stringify({banned:Boolean(banned)})
+    body:JSON.stringify({
+      banned:Boolean(banned),
+      reason
+    })
   });
+
   await loadAccounts();
 }
 

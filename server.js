@@ -105,6 +105,20 @@ app.get("/api/game/quiz/themes", (req, res) => {
   }
 });
 
+
+// MIGRATION ban_reason / ban_notice
+{
+  const userColumns = db.prepare("PRAGMA table_info(users)").all().map(column => column.name);
+
+  if (!userColumns.includes("ban_reason")) {
+    db.exec("ALTER TABLE users ADD COLUMN ban_reason TEXT DEFAULT NULL");
+  }
+
+  if (!userColumns.includes("ban_notice")) {
+    db.exec("ALTER TABLE users ADD COLUMN ban_notice TEXT DEFAULT NULL");
+  }
+}
+
 const PORT = 3000;
 
 const JWT_SECRET = process.env.JWT_SECRET || "change-moi-cette-cle-secrete";
@@ -323,6 +337,14 @@ app.patch("/api/admin/users/:id/admin-access", auth, ownerOnly, (req, res) => {
     WHERE id = ?
   `).run(enabled, id);
 
+  for (const socket of io.sockets.sockets.values()) {
+    if (Number(socket.userId) === id) {
+      socket.emit("admin:access", {
+        enabled
+      });
+    }
+  }
+
   res.json({
     success: true,
     admin_panel: enabled
@@ -336,14 +358,14 @@ app.get("/api/admin/users", auth, chilladminOnly, (req, res) => {
 
   if (search) {
     users = db.prepare(`
-      SELECT id, username, role, gems, banned, created_at
+      SELECT id, username, role, gems, banned, admin_panel, created_at
       FROM users
       WHERE username LIKE ?
       ORDER BY id ASC
     `).all(`%${search}%`);
   } else {
     users = db.prepare(`
-      SELECT id, username, role, gems, banned, created_at
+      SELECT id, username, role, gems, banned, admin_panel, created_at
       FROM users
       ORDER BY id ASC
     `).all();
@@ -359,10 +381,23 @@ app.get("/api/admin/users", auth, chilladminOnly, (req, res) => {
 app.patch("/api/admin/users/:id/ban", auth, chilladminOnly, (req, res) => {
   const userId = Number(req.params.id);
   const banned = Number(req.body?.banned);
+  const reason = String(req.body?.reason || "").trim();
 
   if (!Number.isInteger(userId) || ![0, 1].includes(banned)) {
     return res.status(400).json({
       error: "Paramètres invalides."
+    });
+  }
+
+  if (banned === 1 && !reason) {
+    return res.status(400).json({
+      error: "Une raison est obligatoire pour bannir un utilisateur."
+    });
+  }
+
+  if (reason.length > 500) {
+    return res.status(400).json({
+      error: "La raison ne peut pas dépasser 500 caractères."
     });
   }
 
@@ -384,11 +419,41 @@ app.patch("/api/admin/users/:id/ban", auth, chilladminOnly, (req, res) => {
     });
   }
 
-  db.prepare(`
-    UPDATE users
-    SET banned = ?
-    WHERE id = ?
-  `).run(banned, userId);
+  if (banned === 1) {
+    db.prepare(`
+      UPDATE users
+      SET banned = 1,
+          ban_reason = ?,
+          ban_notice = NULL
+      WHERE id = ?
+    `).run(reason, userId);
+
+    for (const socket of io.sockets.sockets.values()) {
+      if (Number(socket.userId) === userId) {
+        socket.emit("account:banned", {
+          reason
+        });
+
+        setTimeout(() => {
+          socket.disconnect(true);
+        }, 300);
+      }
+    }
+  } else {
+    db.prepare(`
+      UPDATE users
+      SET banned = 0,
+          ban_reason = NULL,
+          ban_notice = 'Ton compte a été débanni.'
+      WHERE id = ?
+    `).run(userId);
+
+    for (const socket of io.sockets.sockets.values()) {
+      if (Number(socket.userId) === userId) {
+        socket.emit("account:unbanned");
+      }
+    }
+  }
 
   res.json({
     success: true,
@@ -907,8 +972,18 @@ app.post("/api/login", async (req, res) => {
 
   if (user.banned) {
     return res.status(403).json({
-      error: "Ton compte est banni."
+      error: `Ton compte est banni${user.ban_reason ? ` pour : ${user.ban_reason}` : "."}`
     });
+  }
+
+  const notice = user.ban_notice || null;
+
+  if (notice) {
+    db.prepare(`
+      UPDATE users
+      SET ban_notice = NULL
+      WHERE id = ?
+    `).run(user.id);
   }
 
   res.cookie("discuteapp_session", createToken(user), {
@@ -922,8 +997,10 @@ app.post("/api/login", async (req, res) => {
       id: user.id,
       username: user.username,
       role: user.role,
-      gems: user.gems
-    }
+      gems: user.gems,
+      admin_panel: user.admin_panel
+    },
+    notice
   });
 });
 
@@ -2091,6 +2168,44 @@ function getChatCustomization(userId) {
 
 io.on("connection", (socket) => {
   console.log("Utilisateur connecté à Socket.IO :", socket.id);
+
+  try {
+    const token = socket.handshake.headers.cookie
+      ?.split(";")
+      .map(value => value.trim())
+      .find(value => value.startsWith("discuteapp_session="))
+      ?.split("=")
+      .slice(1)
+      .join("=");
+
+    if (token) {
+      const decoded = jwt.verify(token, JWT_SECRET);
+
+      const socketUser = db.prepare(`
+        SELECT id, username, banned, ban_reason
+        FROM users
+        WHERE id = ?
+      `).get(decoded.id);
+
+      if (socketUser) {
+        socket.userId = socketUser.id;
+
+        if (socketUser.banned) {
+          socket.emit("account:banned", {
+            reason: socketUser.ban_reason || "Ton compte est banni."
+          });
+
+          setTimeout(() => {
+            socket.disconnect(true);
+          }, 300);
+
+          return;
+        }
+      }
+    }
+  } catch {
+    // Le chat vérifiera également la session lors de l'envoi des messages.
+  }
 
   socket.on("chat:load", () => {
     const messages = db.prepare(`
