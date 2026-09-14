@@ -12,6 +12,7 @@ const OpenAI = require("openai");
 
 
 
+
 const app = express();
 const server = http.createServer(app);
 
@@ -29,6 +30,11 @@ const server = http.createServer(app);
 
 const io = new Server(server);
 const db = new Database("discuteapp.db");
+const openrouter = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1"
+});
+
 
 // ============================================================
 // ADMIN AVANCE / DISCUTEBOT / QUIZ
@@ -1977,9 +1983,12 @@ app.post("/api/discutebot", auth, async (req, res) => {
       content: item.message
     }));
 
-    const response = await openai.responses.create({
-      model: "gpt-5.6-luna",
-      instructions: `
+    const response = await openrouter.chat.completions.create({
+      model: "openrouter/free",
+      messages: [
+        {
+          role: "system",
+          content: `
 Tu es Discutebot 🤖, l'assistant officiel de DiscuteApp.
 
 Règles :
@@ -1990,11 +1999,17 @@ Règles :
 - Ne prétends pas avoir accès à des informations privées auxquelles tu n'as pas accès.
 - Ne révèle jamais les conversations d'autres utilisateurs.
 - Garde tes réponses assez courtes et faciles à lire.
-      `.trim(),
-      input
+          `.trim()
+        },
+        ...input
+      ]
     });
 
-    const reply = response.output_text?.trim();
+    const reply = response.choices?.[0]?.message?.content?.trim();
+
+
+
+
 
     if (!reply) {
       throw new Error("Réponse OpenAI vide.");
