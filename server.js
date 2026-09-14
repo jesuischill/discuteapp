@@ -30,9 +30,8 @@ const server = http.createServer(app);
 
 const io = new Server(server);
 const db = new Database("discuteapp.db");
-const openrouter = new OpenAI({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  baseURL: "https://openrouter.ai/api/v1"
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY
 });
 
 
@@ -107,9 +106,6 @@ app.get("/api/game/quiz/themes", (req, res) => {
 });
 
 const PORT = 3000;
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
 
 const JWT_SECRET = process.env.JWT_SECRET || "change-moi-cette-cle-secrete";
 
@@ -1983,12 +1979,9 @@ app.post("/api/discutebot", auth, async (req, res) => {
       content: item.message
     }));
 
-    const response = await openrouter.chat.completions.create({
-      model: "openrouter/free",
-      messages: [
-        {
-          role: "system",
-          content: `
+    const response = await openai.responses.create({
+      model: "gpt-5.6-luna",
+      instructions: `
 Tu es Discutebot 🤖, l'assistant officiel de DiscuteApp.
 
 Règles :
@@ -1999,13 +1992,11 @@ Règles :
 - Ne prétends pas avoir accès à des informations privées auxquelles tu n'as pas accès.
 - Ne révèle jamais les conversations d'autres utilisateurs.
 - Garde tes réponses assez courtes et faciles à lire.
-          `.trim()
-        },
-        ...input
-      ]
+      `.trim(),
+      input
     });
 
-    const reply = response.choices?.[0]?.message?.content?.trim();
+    const reply = response.output_text?.trim();
 
 
 
